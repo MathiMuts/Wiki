@@ -16,12 +16,12 @@
             </div>
 
             <div class="actions">
-                {% if user.is_authenticated %}
+                {% comment %} {% if user.is_authenticated %} {% endcomment %}
                     <a href="{% url 'wiki:page_edit' page.slug %}" class="edit">Edit This Page</a>
                     <a href="{% url 'wiki:page_create' %}" class="create">Create New Page</a>
-                {% else %}
+                {% comment %} {% else %}
                     <a href="{% url 'login' %}?next={{request.path}}" class="login">Login to edit or delete this page.</a>
-                {% endif %}
+                {% endif %} {% endcomment %}
             </div>
         </div>
 

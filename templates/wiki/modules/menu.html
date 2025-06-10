@@ -8,25 +8,24 @@
         </form>
     </div>
     <ul id="itembar">
+        {# Pinned items will be rendered here by Django #}
         {% if custom_wiki_menu_sections %}
             {% for section in custom_wiki_menu_sections %}
-                {% if section.items %} {# Only show section if it has items after filtering #}
-                    <h3>{{ section.title }}</h3>
+                {% if section.items %}
+                    <h3 data-section-title>{{ section.title }}</h3> {# Added data-attribute for JS #}
                     {% for item in section.items %}
                         {% if item.login_required %}
                             {% if user.is_authenticated %}
-                            <li>
+                            <li data-pinned-item data-slug="{{ item.slug|default:'' }}">
                                 <a href="{{ item.url }}" class="link" {% if item.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}>
-                                    <span class="circle"></span>
-                                    <button class="button-transparent">{{ item.text }}</button>
+                                    <button class="button-transparent"><span class="circle"></span>{{ item.text }}</button>
                                 </a>
                             </li>
                             {% endif %}
                         {% else %}
-                            <li>
+                            <li data-pinned-item data-slug="{{ item.slug|default:'' }}">
                                 <a href="{{ item.url }}" class="link" {% if item.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}>
-                                    <span class="circle"></span>
-                                    <button class="button-transparent">{{ item.text }}</button>
+                                    <button class="button-transparent"><span class="circle"></span>{{ item.text }}</button>
                                 </a>
                             </li>
                         {% endif %}
@@ -34,80 +33,157 @@
                 {% endif %}
             {% endfor %}
         {% else %}
-            <li><a href="{% url 'wiki:wiki' %}" class="link"><button class="button-transparent">All Pages</button></a></li>
+            <li data-pinned-item><a href="{% url 'wiki:wiki' %}" class="link"><button class="button-transparent">All Pages</button></a></li>
             {% if user.is_authenticated %}
-            <li><a href="{% url 'wiki:page_create' %}" class="link"><button class="button-transparent">Create Page</button></a></li>
+            <li data-pinned-item><a href="{% url 'wiki:page_create' %}" class="link"><button class="button-transparent">Create Page</button></a></li>
             {% endif %}
-            <li><small style="padding-left: 10px; color: #777;">Menu not configured.</small></li>
-            <li><small style="padding-left: 10px; color: #777;">Create a page with slug '{{ MENU_CONFIG_PAGE_SLUG }}'.</small></li>
+            <li data-pinned-item><small style="padding-left: 10px; color: #777;">Menu not configured.</small></li>
+            <li data-pinned-item><small style="padding-left: 10px; color: #777;">Create a page with slug '{{ MENU_CONFIG_PAGE_SLUG }}'.</small></li>
         {% endif %}
+
+        {# Container for dynamic search results from all pages #}
+        <div id="dynamicSearchResultsContainer" style="display: none;">
+            <h3 id="dynamicSearchResultsHeading">All Matching Pages</h3>
+            <ul id="dynamicSearchResultsList">
+                {# JS will populate this #}
+            </ul>
+        </div>
     </ul>
 </div>
-<button id="hamburger" aria-label="Open menu" class="button-secondary" style="display: flex; align-items: center;">
-    <img src="{% static 'wiki/icons/list.svg' %}" alt="menu" style="width: 100%;">
+
+<button id="hamburger" aria-label="Toggle menu" class="button-secondary">
+    <span class="line line1"></span>
+    <span class="line line2"></span>
+    <span class="line line3"></span>
 </button>
+
 <script>
-// Your existing hamburger and mousemove script
 const hamburger = document.getElementById('hamburger');
 const menu = document.getElementById('menu');
-const menuConfigSlug = "{{ MENU_CONFIG_PAGE_SLUG }}"; // Pass slug to JS if needed
+const menuConfigSlug = "{{ MENU_CONFIG_PAGE_SLUG }}";
+const allWikiPagesData = JSON.parse('{{ all_wiki_pages_json|escapejs }}');
 
-hamburger.addEventListener('click', function() {
-    menu.classList.toggle('open');
-    if (menu.classList.contains('open')) {
-        document.getElementById('wikiMenuSearchInput').focus();
+const desktopBreakpoint = window.matchMedia('(min-width: 1101px)');
+
+function updateHamburgerActiveState() {
+    if (menu.classList.contains('open') && !desktopBreakpoint.matches) {
+        hamburger.classList.add('is-active');
+    } else {
+        hamburger.classList.remove('is-active');
     }
-});
+}
 
-document.addEventListener('mousemove', function(event) {
-    if (menu.classList.contains('open') && event.clientX > window.innerWidth * 0.25) {
-        if (!menu.contains(event.target) && event.target !== hamburger && !hamburger.contains(event.target)) {
-                menu.classList.remove('open');
+function handleMenuStateForResize() {
+    if (desktopBreakpoint.matches) {
+        menu.classList.remove('open');
+        document.body.style.overflow = '';
+    } else {
+        if (menu.classList.contains('open')) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
         }
     }
+    updateHamburgerActiveState();
+}
+
+handleMenuStateForResize();
+desktopBreakpoint.addEventListener('change', handleMenuStateForResize);
+
+hamburger.addEventListener('click', function() {
+    if (!desktopBreakpoint.matches) {
+        menu.classList.toggle('open');
+        if (menu.classList.contains('open')) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        updateHamburgerActiveState();
+    }
 });
 
-// --- JavaScript for Search (Client-side filtering) ---
 const searchInput = document.getElementById('wikiMenuSearchInput');
-const itembar = document.getElementById('itembar'); // Get the <ul> container
+const itembar = document.getElementById('itembar');
+const pinnedMenuItems = itembar.querySelectorAll('li[data-pinned-item]');
+const pinnedMenuHeadings = itembar.querySelectorAll('h3[data-section-title]');
+const dynamicSearchResultsContainer = document.getElementById('dynamicSearchResultsContainer');
+const dynamicSearchResultsList = document.getElementById('dynamicSearchResultsList');
 
 if (searchInput && itembar) {
     searchInput.addEventListener('input', function() {
         const searchTerm = this.value.toLowerCase().trim();
-        const menuListItems = itembar.querySelectorAll('li');
-        const menuHeadings = itembar.querySelectorAll('h3');
+        const visiblePinnedSlugs = new Set();
+        let hasVisiblePinnedItemInSection = false;
 
-        menuListItems.forEach(item => {
+        pinnedMenuItems.forEach(item => {
             const itemText = item.textContent.toLowerCase();
+            const itemSlug = item.dataset.slug;
             if (itemText.includes(searchTerm)) {
                 item.style.display = '';
+                if(itemSlug) visiblePinnedSlugs.add(itemSlug);
             } else {
                 item.style.display = 'none';
             }
         });
 
-        menuHeadings.forEach(heading => {
+        // Filter pinned section headings
+        pinnedMenuHeadings.forEach(heading => {
             let nextElement = heading.nextElementSibling;
-            let hasVisibleItem = false;
-            while (nextElement && nextElement.tagName === 'LI') {
+            let sectionHasVisibleItem = false;
+            while (nextElement && nextElement.tagName === 'LI' && nextElement.hasAttribute('data-pinned-item')) {
                 if (nextElement.style.display !== 'none') {
-                    hasVisibleItem = true;
+                    sectionHasVisibleItem = true;
                     break;
                 }
                 nextElement = nextElement.nextElementSibling;
             }
-            // Also check if the heading itself matches
             const headingText = heading.textContent.toLowerCase();
-            if (hasVisibleItem || headingText.includes(searchTerm)) {
+            if (sectionHasVisibleItem || headingText.includes(searchTerm)) {
                 heading.style.display = '';
             } else {
                 heading.style.display = 'none';
             }
         });
 
+        dynamicSearchResultsList.innerHTML = '';
+        let dynamicResultsFound = false;
+
+        if (searchTerm !== '') {
+            allWikiPagesData.forEach(page => {
+                if (page.title.toLowerCase().includes(searchTerm)) {
+                    if (!visiblePinnedSlugs.has(page.slug)) {
+                        const li = document.createElement('li');
+                        const a = document.createElement('a');
+                        a.href = page.url;
+                        a.classList.add('link');
+
+                        const button = document.createElement('button');
+                        button.classList.add('button-transparent');
+
+                        const circleSpan = document.createElement('span');
+                        circleSpan.classList.add('circle');
+                        button.appendChild(circleSpan);
+
+                        button.appendChild(document.createTextNode(page.title));
+                        a.appendChild(button);
+                        li.appendChild(a);
+                        dynamicSearchResultsList.appendChild(li);
+                        dynamicResultsFound = true;
+                    }
+                }
+            });
+        }
+
+        if (dynamicResultsFound) {
+            dynamicSearchResultsContainer.style.display = 'block';
+        } else {
+            dynamicSearchResultsContainer.style.display = 'none';
+        }
+
         if (searchTerm === '') {
-            menuListItems.forEach(item => item.style.display = '');
-            menuHeadings.forEach(heading => heading.style.display = '');
+            pinnedMenuItems.forEach(item => item.style.display = '');
+            pinnedMenuHeadings.forEach(heading => heading.style.display = '');
+            dynamicSearchResultsContainer.style.display = 'none';
         }
     });
 }

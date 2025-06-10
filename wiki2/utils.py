@@ -8,7 +8,6 @@ import base64
 import re
 import os
 from django.utils.html import escape
-from django.utils.html import escape
 from django.conf import settings
 
 CODE_PATTERN_RE = re.compile(
@@ -20,7 +19,14 @@ CODE_PATTERN_RE = re.compile(
     re.MULTILINE
 )
 WIKILINK_RE = re.compile(r"\[\[(?:([^|\]]+)\|)?([^\]]+)\]\]")
-FILELINK_RE = re.compile(r"\{\{(?:([^|}]+\|))?([^}]+)\}\}") 
+STANDARD_MARKDOWN_LINK_RE = re.compile(
+    r"(?<!\!)"
+    r"\[([^\]]+)\]"
+    r"\("
+    r"([^)\s]+?)"
+    r"(?:\s+(['\"])(.*?)\3)?"
+    r"\)"
+)
 MARKDOWN_IMAGE_RE = re.compile(r"!\[(.*?)\]\((.*?)(?:\s+(['\"])(.*?)\3)?\)")
 
 def escape_markdown_chars(text):
@@ -77,7 +83,7 @@ def wikilink_replacer_factory(current_page=None):
     return wikilink_replacer
 
 
-def filelink_replacer_factory(current_page=None):
+# def filelink_replacer_factory(current_page=None):
     if not current_page:
         def no_page_replacer(match):
             target_filename = match.group(2).strip()
@@ -85,6 +91,8 @@ def filelink_replacer_factory(current_page=None):
             display_link_text = escape(escape_markdown_chars(raw_link_text))
             return f'<span class="filelink-error" title="File link context error: {escape(target_filename)}">{display_link_text} (page context unavailable)</span>'
         return no_page_replacer
+
+    page_files_list = list(current_page.files.all())
 
     def filelink_replacer(match):
         link_text_group = match.group(1) 
@@ -101,9 +109,8 @@ def filelink_replacer_factory(current_page=None):
         escaped_target_filename_for_title = escape(target_filename_from_tag)
 
         attached_file = None
-        page_files = current_page.files.all()
 
-        for pf in page_files:
+        for pf in page_files_list:
             if pf.filename_display.lower() == target_filename_from_tag.lower():
                 attached_file = pf
                 break
@@ -126,6 +133,118 @@ def filelink_replacer_factory(current_page=None):
 
     return filelink_replacer
 
+def standard_markdown_link_replacer_factory(current_page=None):
+    page_files_list = []
+    if current_page:
+        page_files_list = list(current_page.files.all())
+
+    COMMON_FILE_EXTENSIONS = getattr(settings, 'WIKI_COMMON_FILE_EXTENSIONS', [
+        '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+        '.txt', '.md', '.markdown', '.csv', '.rtf', '.odt', '.ods', '.odp',
+        '.zip', '.tar', '.gz', '.rar', '.7z',
+        '.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp',
+        '.html', '.htm', '.css', '.js', '.json', '.xml', '.py', '.java', '.c', '.cpp', '.h', '.php', '.rb', '.ipynb'
+        '.mp3', '.mp4', '.avi', '.mov', '.mkv', '.webm',
+    ])
+
+    def replacer(match):
+        link_text_markdown = match.group(1)
+        target_path_or_url = match.group(2).strip()
+
+        # Escape Markdown in link text, then HTML escape for safe display
+        display_link_text = escape(escape_markdown_chars(link_text_markdown))
+        escaped_target_for_titles = escape(target_path_or_url) # For use in HTML title attributes
+
+        # 1. Handle External/Absolute/Root-relative links: leave them as is.
+        if target_path_or_url.startswith(('http://', 'https://', '//', '/')):
+            return match.group(0)
+
+        # 2. Try to resolve as a WikiPage link (target_path_or_url could be a slug or title)
+        resolved_page = None
+        try:
+            # Prefer slug match
+            resolved_page = WikiPage.objects.get(slug=target_path_or_url)
+        except WikiPage.DoesNotExist:
+            try:
+                # Fallback to title match (case-insensitive)
+                resolved_page = WikiPage.objects.get(title__iexact=target_path_or_url)
+            except WikiPage.DoesNotExist:
+                pass # Not found as a page by slug or title
+            except WikiPage.MultipleObjectsReturned:
+                pages = WikiPage.objects.filter(title__iexact=target_path_or_url).order_by('-updated_at')
+                if pages.exists():
+                    resolved_page = pages.first()
+        except WikiPage.MultipleObjectsReturned: # Should be rare for slug, but defensive
+            pages = WikiPage.objects.filter(slug=target_path_or_url).order_by('-updated_at')
+            if pages.exists():
+                resolved_page = pages.first()
+
+        if resolved_page:
+            return f'<a href="{resolved_page.get_absolute_url()}" class="wikilink">{display_link_text}</a>'
+
+        # 3. If not a page and current_page context exists, try to resolve as an attached file
+        if current_page:
+            attached_file = None
+            link_target_stem, link_target_ext = os.path.splitext(target_path_or_url)
+            link_target_ext = link_target_ext.lower()
+
+            for pf in page_files_list: # pf is a WikiFile instance
+                # Match 1: Full target matches filename_display (case-insensitive)
+                if pf.filename_display.lower() == target_path_or_url.lower():
+                    attached_file = pf
+                    break
+
+                # Match 2: If link target has no extension (e.g., [Text](my-document))
+                if not link_target_ext: # target_path_or_url is effectively the stem
+                    # Match target (as stem) against filename_slug (slug is extensionless)
+                    if pf.filename_slug.lower() == target_path_or_url.lower():
+                        attached_file = pf
+                        break
+                    
+                    # Match target (as stem) against filename_display's stem,
+                    # if filename_display also has no extension.
+                    pf_display_stem, pf_display_ext = os.path.splitext(pf.filename_display)
+                    if not pf_display_ext and pf_display_stem.lower() == target_path_or_url.lower():
+                        attached_file = pf
+                        break
+                
+                # Match 3: If link target has an extension (e.g. [Text](my-document.pdf))
+                # (Match 1 already covers if pf.filename_display matches target_path_or_url fully)
+                # This is for matching filename_slug against link's stem + actual file ext against link's ext
+                else: 
+                    _, pf_actual_ext = os.path.splitext(pf.file.name) # Get extension from actual stored file
+                    pf_actual_ext = pf_actual_ext.lower()
+                    
+                    # Compare file's slug with link's stem, and file's actual extension with link's extension
+                    if pf.filename_slug.lower() == link_target_stem.lower() and \
+                       pf_actual_ext == link_target_ext:
+                        attached_file = pf
+                        break
+            
+            if attached_file:
+                try:
+                    return f'<a href="{attached_file.file.url}" class="filelink" target="_blank" title="View file: {escape(attached_file.filename_display)}">{display_link_text}</a>'
+                except Exception: # Catch specific errors if possible, e.g., AttributeError
+                    return f'<span class="filelink-error" title="File URL error for {escaped_target_for_titles}">{display_link_text} (URL error)</span>'
+
+        # 4. If not external, not a resolved page, not a resolved file:
+        #    Decide how to handle: "missing file" span or "create page" link.
+        
+        # Heuristic: if target has a common file extension, assume it was meant to be a file.
+        looks_like_file = any(target_path_or_url.lower().endswith(ext) for ext in COMMON_FILE_EXTENSIONS)
+
+        if current_page and looks_like_file: # If context for files exists and it looks like a file
+            return f'<span class="filelink-missing" title="File not found on this page: {escaped_target_for_titles}">{display_link_text} (file not found)</span>'
+        else: # Treat as a potential new page, or if no current_page, it's the best guess.
+            try:
+                # Use slugified target for the `title` query param, as create view might expect that.
+                create_page_title_param = slugify(target_path_or_url)
+                create_url = reverse('wiki:page_create') + f'?title={create_page_title_param}'
+                return f'<a href="{create_url}" class="wikilink-missing" title="Create page: {escaped_target_for_titles}">{display_link_text} (create)</a>'
+            except NoReverseMatch:
+                return f'<span class="wikilink-error" title="Link target not found and create URL error: {escaped_target_for_titles}">{display_link_text} (link error)</span>'
+
+    return replacer
 
 def markdown_image_replacer_factory(current_page=None):
     if not current_page:
@@ -190,27 +309,24 @@ def preprocess_markdown_with_links(markdown_text, current_page=None):
     last_end = 0
 
     _wikilink_replacer = wikilink_replacer_factory(current_page)
-    _filelink_replacer = filelink_replacer_factory(current_page)
-
     _markdown_image_replacer = markdown_image_replacer_factory(current_page)
+    # ORDER MATTERS: image replacer should come before standard markdown link replacer
+    _standard_markdown_link_replacer = standard_markdown_link_replacer_factory(current_page)
 
     for match in CODE_PATTERN_RE.finditer(markdown_text):
         text_before_code = markdown_text[last_end:match.start()]
-
-        processed_text_before = MARKDOWN_IMAGE_RE.sub(_markdown_image_replacer, text_before_code)
-        
-        processed_text_before = WIKILINK_RE.sub(_wikilink_replacer, processed_text_before)
-        processed_text_before = FILELINK_RE.sub(_filelink_replacer, processed_text_before)
-        
+        processed_text_before = WIKILINK_RE.sub(_wikilink_replacer, text_before_code)
+        processed_text_before = MARKDOWN_IMAGE_RE.sub(_markdown_image_replacer, processed_text_before)
+        processed_text_before = STANDARD_MARKDOWN_LINK_RE.sub(_standard_markdown_link_replacer, processed_text_before)
         processed_parts.append(processed_text_before)
         processed_parts.append(match.group(0))
         last_end = match.end()
 
     text_after_last_code = markdown_text[last_end:]
 
-    processed_text_after = MARKDOWN_IMAGE_RE.sub(_markdown_image_replacer, text_after_last_code)
-    processed_text_after = WIKILINK_RE.sub(_wikilink_replacer, processed_text_after)
-    processed_text_after = FILELINK_RE.sub(_filelink_replacer, processed_text_after)
+    processed_text_after = WIKILINK_RE.sub(_wikilink_replacer, text_after_last_code)
+    processed_text_after = MARKDOWN_IMAGE_RE.sub(_markdown_image_replacer, processed_text_after)
+    processed_text_after = STANDARD_MARKDOWN_LINK_RE.sub(_standard_markdown_link_replacer, processed_text_after)
 
     processed_parts.append(processed_text_after)
 

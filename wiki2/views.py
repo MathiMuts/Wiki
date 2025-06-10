@@ -79,7 +79,7 @@ This wiki uses Markdown for formatting content. Here are some common examples:
 ### Links
 - [This is an external link to the Markdown docs.](https://www.markdownguide.org/) `[This is an external link to the Markdown docs.](https://www.markdownguide.org/)`
 - [[ Use double square brackets to link to other pages within this wiki.| Menu Config ]] `[[ Menu Config ]]` or `[[ Display Text | Menu Config ]]`
-- {{ Use double curly braces to link to files attached to the *current page*| test}} `{{ test }}` or `{{ Display Text | test}}`
+- [Use links to attached files to link them in the text.](test.pdf) `[Display Text.](test.pdf)`
 
 ### Images
 ![Alt text for an image](https://picsum.photos/200/300)

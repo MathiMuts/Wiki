@@ -32,7 +32,6 @@ def _extract_json_array_from_text(text_content):
     if code_block_match:
         content_to_search = code_block_match.group(1)
 
-
     start_index = content_to_search.find('[')
     if start_index == -1:
         return None
@@ -51,7 +50,6 @@ def _extract_json_array_from_text(text_content):
                     return json_array_str
                 except json.JSONDecodeError:
                     return None
-    
     return None
 
 def _parse_menu_data(menu_raw_content, source_page_slug="menu"):
@@ -81,7 +79,7 @@ def _parse_menu_data(menu_raw_content, source_page_slug="menu"):
                 continue
 
             text = item_data["text"]
-            url = "#" # Default URL if others fail
+            url = "#"
             login_required = item_data.get("login_required", False)
             is_external = False
 
@@ -92,23 +90,24 @@ def _parse_menu_data(menu_raw_content, source_page_slug="menu"):
                 try:
                     url = reverse('wiki:wiki_page', kwargs={'slug': item_data["slug"]})
                 except NoReverseMatch:
-                    pass # url remains "#"
+                    pass
             elif "url_name" in item_data:
                 try:
                     url_args = item_data.get("url_args", [])
                     url_kwargs = item_data.get("url_kwargs", {})
                     url = reverse(item_data["url_name"], args=url_args, kwargs=url_kwargs)
                 except NoReverseMatch:
-                    pass # url remains "#"
+                    pass
 
             current_section["items"].append({
                 "text": text,
                 "url": url,
                 "login_required": login_required,
-                "is_external": is_external
+                "is_external": is_external,
+                "slug": item_data.get("slug")
             })
         
-        if current_section["items"]: # Only add section if it has actual items
+        if current_section["items"]:
             parsed_sections.append(current_section)
             
     return parsed_sections
@@ -129,15 +128,12 @@ def wiki_menu(request):
                 defaults={'title': menu_page_title, 'content': DEFAULT_MENU_CONFIG}
             )
             menu_config_content = new_menu_page.content
-        except Exception as e_create:
+        except Exception:
             menu_config_content = DEFAULT_MENU_CONFIG
     except WikiPage.MultipleObjectsReturned:
         menu_config_page = WikiPage.objects.filter(slug=menu_page_slug_val).order_by('id').first()
-        if menu_config_page:
-            menu_config_content = menu_config_page.content
-        else:
-            menu_config_content = DEFAULT_MENU_CONFIG
-    except Exception as e_fetch: 
+        menu_config_content = menu_config_page.content if menu_config_page else DEFAULT_MENU_CONFIG
+    except Exception:
         menu_config_content = DEFAULT_MENU_CONFIG
 
     if menu_config_content is None:
@@ -147,21 +143,37 @@ def wiki_menu(request):
 
     if not custom_menu_sections:
         custom_menu_sections = _parse_menu_data(DEFAULT_MENU_CONFIG, source_page_slug="DEFAULT_MENU_CONFIG_fallback")
-        
         if not custom_menu_sections:
             try:
-                menu_config_page_url_for_error = f"/wiki/{menu_page_slug_val}/"
+                menu_config_page_url_for_error = reverse('wiki:wiki_page', kwargs={'slug': menu_page_slug_val})
             except Exception:
-                 menu_config_page_url_for_error = "#"
-
+                 menu_config_page_url_for_error = f"/wiki/{menu_page_slug_val}/"
             custom_menu_sections = [
                 {
                     "title": "Menu Config Error",
-                    "items": [{"text": "Please check menu configuration.", "url": menu_config_page_url_for_error}]
+                    "items": [{"text": "Check menu config.", "url": menu_config_page_url_for_error, "slug": menu_page_slug_val}]
                 }
             ]
 
+    all_pages_for_search = []
+    try:
+        pages = WikiPage.objects.all().values('title', 'slug')
+        for page in pages:
+            try:
+                page_url = reverse('wiki:wiki_page', kwargs={'slug': page['slug']})
+                all_pages_for_search.append({
+                    "title": page['title'],
+                    "slug": page['slug'],
+                    "url": page_url
+                })
+            except NoReverseMatch:
+                pass
+    except Exception:
+        pass
+
+
     return {
         "custom_wiki_menu_sections": custom_menu_sections,
-        "MENU_CONFIG_PAGE_SLUG": menu_page_slug_val
+        "MENU_CONFIG_PAGE_SLUG": menu_page_slug_val,
+        "all_wiki_pages_json": json.dumps(all_pages_for_search)
     }

@@ -205,3 +205,38 @@ input[type="file"]::-webkit-file-upload-button, input[type="file"]::file-selecto
     color: #007bff
     
 }
+
+.hold-to-delete-page-btn {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    min-width: 150px;
+    text-align: center;
+}
+
+.hold-to-delete-page-btn .btn-text {
+    position: relative;
+    z-index: 2;
+    pointer-events: none;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.hold-to-delete-page-btn .progress-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0%;
+    background-color: var(--button-danger-bg-hover, #c82333);
+    opacity: 0.6;
+    transition: width 0.1s linear;
+    z-index: 1;
+}
+
+.hold-to-delete-page-btn.is-ready-to-delete .progress-fill {
+    opacity: 0.85;
+}
