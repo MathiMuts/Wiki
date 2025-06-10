@@ -1,0 +1,114 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'wiki/css/menu.css'%}">
+
+<div id="menu" class="card-plain">
+    <div class="menu-search-container">
+        <form id="wikiMenuSearchForm" action="{% url 'wiki:search' %}" method="GET">
+            <input class="input" type="search" id="wikiMenuSearchInput" name="q" placeholder="Search wiki pages..." aria-label="Search wiki pages" autocomplete="off">
+        </form>
+    </div>
+    <ul id="itembar">
+        {% if custom_wiki_menu_sections %}
+            {% for section in custom_wiki_menu_sections %}
+                {% if section.items %} {# Only show section if it has items after filtering #}
+                    <h3>{{ section.title }}</h3>
+                    {% for item in section.items %}
+                        {% if item.login_required %}
+                            {% if user.is_authenticated %}
+                            <li>
+                                <a href="{{ item.url }}" class="link" {% if item.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}>
+                                    <span class="circle"></span>
+                                    <button class="button-transparent">{{ item.text }}</button>
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% else %}
+                            <li>
+                                <a href="{{ item.url }}" class="link" {% if item.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}>
+                                    <span class="circle"></span>
+                                    <button class="button-transparent">{{ item.text }}</button>
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <li><a href="{% url 'wiki:wiki' %}" class="link"><button class="button-transparent">All Pages</button></a></li>
+            {% if user.is_authenticated %}
+            <li><a href="{% url 'wiki:page_create' %}" class="link"><button class="button-transparent">Create Page</button></a></li>
+            {% endif %}
+            <li><small style="padding-left: 10px; color: #777;">Menu not configured.</small></li>
+            <li><small style="padding-left: 10px; color: #777;">Create a page with slug '{{ MENU_CONFIG_PAGE_SLUG }}'.</small></li>
+        {% endif %}
+    </ul>
+</div>
+<button id="hamburger" aria-label="Open menu" class="button-secondary" style="display: flex; align-items: center;">
+    <img src="{% static 'wiki/icons/list.svg' %}" alt="menu" style="width: 100%;">
+</button>
+<script>
+// Your existing hamburger and mousemove script
+const hamburger = document.getElementById('hamburger');
+const menu = document.getElementById('menu');
+const menuConfigSlug = "{{ MENU_CONFIG_PAGE_SLUG }}"; // Pass slug to JS if needed
+
+hamburger.addEventListener('click', function() {
+    menu.classList.toggle('open');
+    if (menu.classList.contains('open')) {
+        document.getElementById('wikiMenuSearchInput').focus();
+    }
+});
+
+document.addEventListener('mousemove', function(event) {
+    if (menu.classList.contains('open') && event.clientX > window.innerWidth * 0.25) {
+        if (!menu.contains(event.target) && event.target !== hamburger && !hamburger.contains(event.target)) {
+                menu.classList.remove('open');
+        }
+    }
+});
+
+// --- JavaScript for Search (Client-side filtering) ---
+const searchInput = document.getElementById('wikiMenuSearchInput');
+const itembar = document.getElementById('itembar'); // Get the <ul> container
+
+if (searchInput && itembar) {
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase().trim();
+        const menuListItems = itembar.querySelectorAll('li');
+        const menuHeadings = itembar.querySelectorAll('h3');
+
+        menuListItems.forEach(item => {
+            const itemText = item.textContent.toLowerCase();
+            if (itemText.includes(searchTerm)) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        menuHeadings.forEach(heading => {
+            let nextElement = heading.nextElementSibling;
+            let hasVisibleItem = false;
+            while (nextElement && nextElement.tagName === 'LI') {
+                if (nextElement.style.display !== 'none') {
+                    hasVisibleItem = true;
+                    break;
+                }
+                nextElement = nextElement.nextElementSibling;
+            }
+            // Also check if the heading itself matches
+            const headingText = heading.textContent.toLowerCase();
+            if (hasVisibleItem || headingText.includes(searchTerm)) {
+                heading.style.display = '';
+            } else {
+                heading.style.display = 'none';
+            }
+        });
+
+        if (searchTerm === '') {
+            menuListItems.forEach(item => item.style.display = '');
+            menuHeadings.forEach(heading => heading.style.display = '');
+        }
+    });
+}
+</script>

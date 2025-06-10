@@ -1,0 +1,29 @@
+{% extends "./wiki_base.html" %}
+{% block title%}Wiki-search{% endblock %}
+{% load static %}
+{% block content %}
+{% if not is_search %}
+    <h1>All Wiki Pages</h1>
+{% else %}
+    <h1>Search Results</h1>
+{% endif %}
+
+    {% if pages %}
+        <ul>
+            {% for page in pages %}
+                <li>
+                    <a href="{{ page.get_absolute_url }}">{{ page.title }}</a>
+                    <small style="color: #777;">(Last updated: {{ page.updated_at|date:"M d, Y H:i" }})</small>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No wiki pages yet.
+            {% if user.is_authenticated %}
+                <a href="{% url 'wiki:page_create' %}">Create one?</a>
+            {% else %}
+                Please <a href="{% url 'login' %}?next={% url 'wiki:page_create' %}">login to create one</a>.
+            {% endif %}
+        </p>
+    {% endif %}
+{% endblock %}

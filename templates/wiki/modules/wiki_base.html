@@ -1,0 +1,20 @@
+{% load static %}
+<link rel="stylesheet", href="{% static 'wiki/css/style.css'%}">
+<link rel="stylesheet", href="{% static 'wiki/css/wiki.css'%}">
+
+<div id="page">
+    {% include "./menu.html" %}
+
+    <div id="wiki-content">
+        {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        {% block content %}
+        {% endblock %}
+    </div>
+</div>

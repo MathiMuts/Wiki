@@ -1,0 +1,91 @@
+#menu {
+    position: fixed;
+    top: calc(2vw + 70px);
+    bottom: 2vw;
+    left: 2vw;
+
+    width: 18rem;
+    padding: 2rem;
+
+    transform: translateX(calc(-100% - 4vw));
+    transition: transform 0.3s ease;
+    z-index: 10001;
+}
+#menu.open {
+    transform: translateX(0);
+    
+}
+#hamburger {
+    position: fixed;
+    top: calc(3rem + 70px);
+    height: 4rem;
+    width: 4rem;
+    left: 3rem;
+    z-index: 1001;
+}
+@media (max-width: 1100px) {
+   #hamburger {
+        top: auto;
+        left: 1.5rem;
+        bottom: calc(1.5rem + 75px);
+    } 
+}
+#menu ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+#menu h3 {
+    margin-top: 1rem;
+    margin-bottom: 0rem;
+}
+#menu li {
+    margin: 4px;
+    transition: transform 0.3s ease, font-weight 0.15s ease;
+}
+#menu li:hover {
+    transform: scale(1.05);
+}
+#menu button {
+    font-size: 18px;
+    color: var(--secondary-text-color);
+}
+.circle {
+    display: inline-block;
+    width: calc(1lh * 0.6);
+    height: calc(1lh * 0.6);
+    border-radius: 50%;
+    margin: 0 5px 0 5px;
+    background-color: var(--secondary-text-color);
+    opacity: 0.5;
+}
+
+.menu-search-container {
+    padding: 0.5rem 0;
+}
+
+#wikiMenuSearchForm {
+    display: flex;
+}
+
+#wikiMenuSearchInput {
+    flex-grow: 1;
+    font-size: 1rem;
+    height: 3rem;
+    padding: 1rem;
+}
+#itembar::-webkit-scrollbar {
+    display: none;
+}
+#itembar {
+    position: absolute;
+    border-top: 1px solid var(--secondary-text-color);
+    border-bottom: 1px solid var(--secondary-text-color);
+    top: 7.5rem;
+    bottom: 2rem;
+    width: 18rem;
+    overflow-y: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
