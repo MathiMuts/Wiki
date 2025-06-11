@@ -1,6 +1,8 @@
 {% load static %}
 <link rel="stylesheet" href="{% static 'wiki/css/menu.css'%}">
 
+<a href="{% url 'wiki:wiki' %}"><img src="{% static 'wiki/icons/wina.svg' %}" onclick='' class="desktop-only" alt="Wina Logo" style="position: fixed; left: calc(2vw - 2.5rem); top: calc(2vw - 38px); width: 25rem; z-index: 100001; color: var(--primary-text-color);"></a>
+
 <div id="menu" class="card-plain">
     <div class="menu-search-container">
         <form id="wikiMenuSearchForm" action="{% url 'wiki:search' %}" method="GET">
@@ -48,14 +50,25 @@
                 {% endif %}
             {% endfor %}
         {% else %}
-            {# ... (fallback menu items remain the same) ... #}
+            <li data-pinned-item><a href="{% url 'wiki:wiki' %}" class="link"><button class="button-transparent">All Pages</button></a></li>
+            <li data-pinned-item><small style="padding-left: 10px; color: #777;">Menu not configured.</small></li>
+            <li data-pinned-item><small style="padding-left: 10px; color: #777;">Create a page with slug '{{ MENU_CONFIG_PAGE_SLUG }}'.</small></li>
         {% endif %}
-
-        {# ... (dynamic search results container remains the same) ... #}
+            <div id="dynamicSearchResultsContainer" style="display: none;">
+                <h3 id="dynamicSearchResultsHeading">All Matching Pages</h3>
+                <ul id="dynamicSearchResultsList">
+                {# JS will populate this #}
+            </ul>
+        </div>
     </ul>
 </div>
 
-{# ... (hamburger button and script remain the same) ... #}
+<button id="hamburger" aria-label="Toggle menu" class="button-secondary">
+    <span class="line line1"></span>
+    <span class="line line2"></span>
+    <span class="line line3"></span>
+</button>
+
 <script>
 const hamburger = document.getElementById('hamburger');
 const menu = document.getElementById('menu');

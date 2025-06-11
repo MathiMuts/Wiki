@@ -1,6 +1,7 @@
 # wiki/views.py
 import mimetypes
 import os
+from urllib.parse import urlencode
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import WikiPage, WikiFile 
 from .forms import WikiPageForm, WikiFileForm 
@@ -11,6 +12,8 @@ from . import utils
 from django.contrib import messages 
 from django.urls import reverse
 from django.http import Http404, HttpResponse, JsonResponse
+from django.utils.text import slugify
+
 
 
 ROOT_WIKI_PAGE_SLUG = "home"
@@ -231,20 +234,31 @@ def all_wiki_pages(request):
     return render(request, 'wiki/modules/wiki_list.html', {'pages': pages, 'list_title': "All Wiki Pages"})
 
 def wiki_page(request, slug):
-    page = get_object_or_404(WikiPage, slug=slug)
-    processed_markdown_content = utils.preprocess_markdown_with_links(page.content, current_page=page)
-    html_content = markdown2.markdown(processed_markdown_content, extras=["fenced-code-blocks", "tables", "nofollow", "header-ids", "break-on-newline"])
+    try:
+        page = WikiPage.objects.get(slug=slug)
+        processed_markdown_content = utils.preprocess_markdown_with_links(page.content, current_page=page)
+        html_content = markdown2.markdown(processed_markdown_content, extras=["fenced-code-blocks", "tables", "nofollow", "header-ids", "break-on-newline"])
+        qr = utils.qr_img(request)
+        page_files = page.files.all().order_by('-uploaded_at')
 
-    qr = utils.qr_img(request)
-    
-    page_files = page.files.all().order_by('-uploaded_at')
-
-    return render(request, 'wiki/modules/wiki_page.html', {
-        'page': page, 
-        'html_content': html_content, 
-        'qrcode': qr,
-        'page_files': page_files,
-    })
+        return render(request, 'wiki/modules/wiki_page.html', {
+            'page': page,
+            'html_content': html_content,
+            'qrcode': qr,
+            'page_files': page_files,
+        })
+    except WikiPage.DoesNotExist:
+        # Page does not exist, redirect to the create page view
+        create_url = reverse('wiki:page_create')
+        params = {
+            'initial_title_str': slug.replace('-', ' ').title(),
+            'initial_slug_str': slug
+        }
+        redirect_url = f"{create_url}?{urlencode(params)}"
+        return redirect(redirect_url)
+    except WikiPage.MultipleObjectsReturned:
+        messages.error(request, f"Error: Multiple pages found for the URL '{slug}'. Please contact an administrator.")
+        return redirect('wiki:wiki')
 
 @login_required
 def page_create(request):
@@ -257,8 +271,46 @@ def page_create(request):
             messages.success(request, f"Page '{page.title}' created successfully.")
             return redirect(page.get_absolute_url())
     else:
-        initial_title = request.GET.get('title', '')
-        form = WikiPageForm(initial={'title': initial_title.replace('-', ' ').title() if initial_title else ''})
+        initial_data = {}
+
+        raw_initial_title = request.GET.get('initial_title_str', '')
+        raw_initial_slug = request.GET.get('initial_slug_str', '')
+
+        final_title = ''
+        final_slug = ''
+
+        if raw_initial_title:
+            if raw_initial_title == slugify(raw_initial_title) and '-' in raw_initial_title:
+                final_title = raw_initial_title.replace('-', ' ').title()
+            else:
+                final_title = raw_initial_title 
+        elif raw_initial_slug:
+            final_title = raw_initial_slug.replace('-', ' ').title()
+        
+        if raw_initial_slug:
+            final_slug = raw_initial_slug
+
+        if final_title:
+            initial_data['title'] = final_title
+        if final_slug:
+            initial_data['slug'] = final_slug
+        
+        form = WikiPageForm(initial=initial_data)
+        
+        if raw_initial_title or raw_initial_slug:
+            page_display_name_for_msg = initial_data.get('title', 'this page')
+            
+            page_exists_now = False
+            intended_slug_for_check = initial_data.get('slug')
+            if not intended_slug_for_check and initial_data.get('title'):
+                intended_slug_for_check = slugify(initial_data.get('title'))
+
+            if intended_slug_for_check and WikiPage.objects.filter(slug=intended_slug_for_check).exists():
+                page_exists_now = True
+            
+            if not page_exists_now:
+                 messages.info(request, f"The page '{page_display_name_for_msg}' does not exist. You can create it now.")
+
     return render(request, 'wiki/modules/wiki_form.html', {'form': form, 'action': 'Create', 'page_files': None, 'upload_form': None})
 
 @login_required

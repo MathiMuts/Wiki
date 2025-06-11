@@ -136,9 +136,10 @@
     height: calc(1lh * 0.4);
     border-radius: 50%;
     margin: 0 10px 0 5px;
-    background-color: var(--secondary-text-color);
     vertical-align: middle;
     margin-right: 1rem;
+    background-color: var(--secondary-text-color);
+    transition: background-color 0.2s ease-in-out;
 }
 
 @media (max-width: 1100px) {
@@ -148,11 +149,12 @@
 
     #menu h3 {
         margin-top: 2rem;
-        font-size: 30pt;
+        font-size: 50pt;
     }
 
     #menu button.button-transparent {
         font-size: 25pt;
+        text-align: center;
     }
 
     #hamburger {
@@ -174,6 +176,12 @@
         right: 0;
         bottom: 0;
         top: auto;
+    }
+
+    #menu ul {
+        width: 100%;
+        text-align: center;
+        padding-bottom: 5rem;
     }
 }
 
@@ -198,8 +206,6 @@
         display: none;
     }
 
-    /* #menuCloseButton styles removed */
-
     #itembar {
         position: absolute;
         border-top: 1px solid var(--secondary-text-color);
@@ -221,26 +227,11 @@
 
 #menu h3 a.section-title-link {
     text-decoration: none;
-    color: inherit; /* Inherit color from h3, which might have an inline style */
-    display: inline-block; /* Allows transform for smoother animation */
-    transition: transform 0.2s ease-in-out, color 0.2s ease-in-out; /* Smooth transition for hover */
-    /* If you want to ensure the link takes up the full width of the h3 for clickability:
-    display: block; 
-    width: 100%;
-    */
+    color: inherit;
+    display: inline-block;
+    transition: transform 0.2s ease-in-out, color 0.2s ease-in-out;
 }
 
 #menu h3 a.section-title-link:hover {
-    transform: scale(1.03); /* Example: Slight zoom on hover */
-    /* You could also change text-decoration or add a subtle shadow, e.g.:
-    text-decoration: underline; 
-    text-shadow: 0 0 1px currentColor; 
-    */
-}
-
-/* Ensure default circle color is defined if not already */
-.circle {
-    /* ... existing styles ... */
-    background-color: var(--secondary-text-color); /* Default color if not overridden by inline style */
-    transition: background-color 0.2s ease-in-out; /* Smooth color transition if needed */
+    transform: scale(1.03);
 }

@@ -5,38 +5,50 @@ import re
 from .views import MENU_CONFIG_PAGE_SLUG
 
 DEFAULT_MENU_CONFIG = f"""
+## Be carefull, NO TRAILING COMMAS `,`!
 ```
 [
     {{
         "title": "Navigation",
-        "title_color": "#007bff",
+        "title_color": "#000000",
         "section_link_slug": "home",
         "items": [
-            {{"text": "Home", "slug": "home", "circle_color": "#28a745"}},
-            {{"text": "All Pages", "url_name": "wiki:all_pages", "circle_color": "purple"}},
-            {{"text": "Create New Page", "url_name": "wiki:page_create", "login_required": true}}
-        ]
-    }},
-    {{
-        "title": "Configuration",
-        "section_link_url_name": "wiki:all_pages",
-        "items": [
-            {{"text": "Menu bar", "slug": "{MENU_CONFIG_PAGE_SLUG}", "circle_color": "rgba(255,0,0,0.7)"}},
+            {{"text": "Home", "slug": "home"}},
             {{"text": "Markdown Guide", "url": "https://www.markdownguide.org/basic-syntax/"}}
         ]
     }},
     {{
-        "title": "External Section Link",
-        "title_color": "green",
-        "section_link_url": "https://djangoproject.com",
+        "title": "Wiskunde",
+        "section_link_slug": "wiskunde",
+        "title_color": "purple",
         "items": [
-            {{"text": "Sub Item 1", "slug":"home"}}
+            {{"text": "1ˢᵗᵉ Bachelor", "slug": "w1b", "circle_color": "purple"}},
+            {{"text": "2ᵈᵉ Bachelor", "slug": "w2b", "circle_color": "purple"}},
+            {{"text": "3ᵈᵉ Bachelor", "slug": "w3b", "circle_color": "purple"}},
+            {{"text": "1ˢᵗᵉ Master", "slug": "w1m", "circle_color": "purple"}},
+            {{"text": "2ᵈᵉ Master", "slug": "w2m", "circle_color": "purple"}}
         ]
     }},
     {{
-        "title": "No Link Section",
+        "title": "Fysica",
+        "section_link_slug": "fysica",
+        "title_color": "darkorange",
         "items": [
-            {{"text": "Item without section link", "slug":"home"}}
+            {{"text": "1ˢᵗᵉ Bachelor", "slug": "f1b", "circle_color": "darkorange"}},
+            {{"text": "2ᵈᵉ Bachelor", "slug": "f2b", "circle_color": "darkorange"}},
+            {{"text": "3ᵈᵉ Bachelor", "slug": "f3b", "circle_color": "darkorange"}},
+            {{"text": "1ˢᵗᵉ Master", "slug": "f1m", "circle_color": "darkorange"}},
+            {{"text": "2ᵈᵉ Master", "slug": "f2m", "circle_color": "darkorange"}}
+        ]
+    }},
+    {{
+        "title": "Informatica",
+        "section_link_slug": "informatica",
+        "title_color": "crimson",
+        "items": [
+            {{"text": "1ˢᵗᵉ Bachelor", "slug": "i1b", "circle_color": "crimson"}},
+            {{"text": "2ᵈᵉ Bachelor", "slug": "i2b", "circle_color": "crimson"}},
+            {{"text": "3ᵈᵉ Bachelor", "slug": "i3b", "circle_color": "crimson"}}
         ]
     }}
 ]

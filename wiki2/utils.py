@@ -1,7 +1,7 @@
 from django.urls import reverse, NoReverseMatch
 from django.utils.text import slugify
 from django.db.models import Q
-from .models import WikiPage, WikiFile 
+from .models import WikiPage
 from io import BytesIO
 import qrcode
 import base64
