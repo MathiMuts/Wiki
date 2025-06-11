@@ -36,11 +36,11 @@
     margin-left: auto;
 }
 .actions a.view, .actions a.list, .actions .edit, input[type="file"]::-webkit-file-upload-button, input[type="file"]::file-selector-button { background-color: #007bff; color: white;}
-.actions a.create, .file-download-btn { background-color: #5cb85c; }
-.actions a.login { background-color: #f0ad4e; }
-.actions a.edit { background-color: #007bff; }
+.actions a.create { background-color: #5cb85c; }
+.actions a.login, .actions a.warn { background-color: #f0ad4e; }
+.actions a.edit, .subpage-edit-btn { background-color: #007bff; color: white; }
 .actions button.delete, .file-delete-btn { background-color: #d9534f; color: white;}
-.actions .button-link.cancel, .file-download-btn { background-color: #6c757d; color: white; }
+.actions .button-link.cancel, .file-download-btn, .subpage-download-btn { background-color: #6c757d; color: white; }
 .actions a:hover, .actions button:hover, .button-danger-small:hover { opacity: 0.9; }
 .actions .button-link.cancel { margin-left: 10px; text-decoration: none; padding: 10px 15px; border-radius: 8px; font-size: 0.9em;border: none; }
 
@@ -206,7 +206,7 @@ input[type="file"]::-webkit-file-upload-button, input[type="file"]::file-selecto
     
 }
 
-.hold-to-delete-page-btn {
+.hold-to-delete-btn {
     position: relative;
     overflow: hidden;
     cursor: pointer;
@@ -218,14 +218,14 @@ input[type="file"]::-webkit-file-upload-button, input[type="file"]::file-selecto
     text-align: center;
 }
 
-.hold-to-delete-page-btn .btn-text {
+.hold-to-delete-btn .btn-text {
     position: relative;
     z-index: 2;
     pointer-events: none;
     transition: opacity 0.2s ease-in-out;
 }
 
-.hold-to-delete-page-btn .progress-fill {
+.hold-to-delete-btn .progress-fill {
     position: absolute;
     top: 0;
     left: 0;
@@ -237,6 +237,9 @@ input[type="file"]::-webkit-file-upload-button, input[type="file"]::file-selecto
     z-index: 1;
 }
 
-.hold-to-delete-page-btn.is-ready-to-delete .progress-fill {
+.hold-to-delete-btn.is-ready-to-delete .progress-fill {
     opacity: 0.85;
 }
+
+/*NOTE: TODO: FIXME: WARNING: INFO:*/
+

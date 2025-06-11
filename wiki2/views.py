@@ -1,17 +1,19 @@
 # wiki/views.py
-import mimetypes
 import os
-from urllib.parse import urlencode
-from django.shortcuts import render, get_object_or_404, redirect
-from .models import WikiPage, WikiFile 
-from .forms import WikiPageForm, WikiFileForm 
+import mimetypes
 import markdown2
+from . import utils
+from urllib.parse import urlencode
+from .models import WikiPage, WikiFile, ExamPage
+from .forms import WikiPageForm, WikiFileForm, ExamPageForm
+
+from django.urls import reverse
+from django.http import Http404, HttpResponse, JsonResponse, FileResponse 
+from django.shortcuts import render, get_object_or_404, redirect
+
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required
-from . import utils
-from django.contrib import messages 
-from django.urls import reverse
-from django.http import Http404, HttpResponse, JsonResponse
+from django.contrib import messages
 from django.utils.text import slugify
 
 
@@ -228,7 +230,6 @@ def wiki(request):
             'list_title': "Wiki Error",
         })
     
-
 def all_wiki_pages(request):
     pages = WikiPage.objects.all().order_by('-updated_at')
     return render(request, 'wiki/modules/wiki_list.html', {'pages': pages, 'list_title': "All Wiki Pages"})
@@ -236,6 +237,7 @@ def all_wiki_pages(request):
 def wiki_page(request, slug):
     try:
         page = WikiPage.objects.get(slug=slug)
+        exam_subpages = page.exam_subpages.all().order_by('created_at')
         processed_markdown_content = utils.preprocess_markdown_with_links(page.content, current_page=page)
         html_content = markdown2.markdown(processed_markdown_content, extras=["fenced-code-blocks", "tables", "nofollow", "header-ids", "break-on-newline"])
         qr = utils.qr_img(request)
@@ -246,7 +248,9 @@ def wiki_page(request, slug):
             'html_content': html_content,
             'qrcode': qr,
             'page_files': page_files,
+            'exam_subpages': exam_subpages,
         })
+    
     except WikiPage.DoesNotExist:
         # Page does not exist, redirect to the create page view
         create_url = reverse('wiki:page_create')
@@ -417,3 +421,94 @@ def page_delete_file(request, slug, file_id):
             return JsonResponse({'status': 'error', 'message': 'Could not delete file.'}, status=500)
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method. Only POST is allowed.'}, status=405)
+
+@login_required
+def exam_create(request, parent_slug):
+    parent_page = get_object_or_404(WikiPage, slug=parent_slug)
+    if request.method == 'POST':
+        form = ExamPageForm(request.POST, parent_page=parent_page)
+        if form.is_valid():
+            exam = form.save(commit=False)
+            exam.parent_page = parent_page
+            exam.last_modified_by = request.user
+            exam.save()
+            
+            success, message = exam.compile_and_save_pdf(force_recompile=True)
+            if success:
+                messages.success(request, f"Exam '{exam.title}' created. {message}")
+            else:
+                messages.warning(request, f"Exam '{exam.title}' created, but PDF generation failed: {message}")
+            return redirect(parent_page.get_absolute_url())
+    else:
+        form = ExamPageForm(parent_page=parent_page)
+    
+    return render(request, 'wiki/modules/exam_form.html', {
+        'form': form, 
+        'parent_page': parent_page,
+        'action': 'Create'
+    })
+
+@login_required
+def exam_edit(request, parent_slug, exam_slug):
+    parent_page = get_object_or_404(WikiPage, slug=parent_slug)
+    exam = get_object_or_404(ExamPage, parent_page=parent_page, slug=exam_slug)
+
+    if request.method == 'POST':
+        form = ExamPageForm(request.POST, instance=exam, parent_page=parent_page)
+        if form.is_valid():
+            edited_exam = form.save(commit=False)
+            edited_exam.last_modified_by = request.user
+            
+            recompile_hint = False
+            if 'content' in form.changed_data or 'page_type' in form.changed_data:
+                recompile_hint = True
+            
+            edited_exam.save()
+
+            success, message = edited_exam.compile_and_save_pdf(force_recompile=recompile_hint)
+            if success:
+                messages.success(request, f"Exam '{edited_exam.title}' updated. {message}")
+            else:
+                messages.warning(request, f"Exam '{edited_exam.title}' updated, but PDF processing failed: {message}")
+            return redirect(parent_page.get_absolute_url())
+    else:
+        form = ExamPageForm(instance=exam, parent_page=parent_page)
+        
+    return render(request, 'wiki/modules/exam_form.html', {
+        'form': form, 
+        'exam': exam,
+        'parent_page': parent_page,
+        'action': 'Edit'
+    })
+
+@login_required
+def exam_delete(request, parent_slug, exam_slug):
+    parent_page = get_object_or_404(WikiPage, slug=parent_slug)
+    exam = get_object_or_404(ExamPage, parent_page=parent_page, slug=exam_slug)
+    if request.method == 'POST':
+        exam_title = exam.title
+        exam.delete()
+        messages.success(request, f"Exam '{exam_title}' deleted successfully.")
+        return redirect(parent_page.get_absolute_url())
+    return render(request, 'wiki/modules/exam_confirm_delete.html', {'exam': exam, 'parent_page': parent_page})
+
+def exam_download(request, parent_slug, exam_slug):
+    exam = get_object_or_404(ExamPage, parent_page__slug=parent_slug, slug=exam_slug)
+
+    if not exam.pdf_file or not os.path.exists(exam.pdf_file.path):
+        messages.info(request, f"PDF for '{exam.title}' was missing, attempting to regenerate...")
+        success, msg = exam.compile_and_save_pdf(force_recompile=True)
+        if not success or not exam.pdf_file or not os.path.exists(exam.pdf_file.path):
+            messages.error(request, f"Could not generate or find PDF for '{exam.title}'. Error: {msg}")
+            return redirect(exam.parent_page.get_absolute_url())
+        exam.refresh_from_db()
+
+
+    try:
+        return FileResponse(open(exam.pdf_file.path, 'rb'), as_attachment=True, filename=exam._get_base_pdf_filename())
+    except FileNotFoundError:
+        messages.error(request, f"PDF file for '{exam.title}' not found on the server, even after trying to regenerate.")
+        return redirect(exam.parent_page.get_absolute_url())
+    except Exception as e:
+        messages.error(request, f"Error serving PDF for '{exam.title}': {e}")
+        return redirect(exam.parent_page.get_absolute_url())
