@@ -9,17 +9,34 @@ DEFAULT_MENU_CONFIG = f"""
 [
     {{
         "title": "Navigation",
+        "title_color": "#007bff",
+        "section_link_slug": "home",
         "items": [
-            {{"text": "Home", "slug": "home"}},
-            {{"text": "All Pages", "url_name": "wiki:all_pages"}},
+            {{"text": "Home", "slug": "home", "circle_color": "#28a745"}},
+            {{"text": "All Pages", "url_name": "wiki:all_pages", "circle_color": "purple"}},
             {{"text": "Create New Page", "url_name": "wiki:page_create", "login_required": true}}
         ]
     }},
     {{
         "title": "Configuration",
+        "section_link_url_name": "wiki:all_pages",
         "items": [
-            {{"text": "Menu bar", "slug": "{MENU_CONFIG_PAGE_SLUG}"}},
-            {{"text": "Markdown", "url": "https://www.markdownguide.org/basic-syntax/"}}
+            {{"text": "Menu bar", "slug": "{MENU_CONFIG_PAGE_SLUG}", "circle_color": "rgba(255,0,0,0.7)"}},
+            {{"text": "Markdown Guide", "url": "https://www.markdownguide.org/basic-syntax/"}}
+        ]
+    }},
+    {{
+        "title": "External Section Link",
+        "title_color": "green",
+        "section_link_url": "https://djangoproject.com",
+        "items": [
+            {{"text": "Sub Item 1", "slug":"home"}}
+        ]
+    }},
+    {{
+        "title": "No Link Section",
+        "items": [
+            {{"text": "Item without section link", "slug":"home"}}
         ]
     }}
 ]
@@ -67,47 +84,104 @@ def _parse_menu_data(menu_raw_content, source_page_slug="menu"):
         return []
 
     for section_data in sections_data:
-        if not isinstance(section_data, dict) or "title" not in section_data or "items" not in section_data:
+        if not isinstance(section_data, dict) or "title" not in section_data: # "items" can be optional for sections that only act as a link
             continue
 
-        current_section = {"title": section_data["title"], "items": []}
-        if not isinstance(section_data["items"], list):
-            continue
+        section_url = None
+        section_is_external = False
 
-        for item_data in section_data["items"]:
-            if not isinstance(item_data, dict) or "text" not in item_data:
-                continue
-
-            text = item_data["text"]
-            url = "#"
-            login_required = item_data.get("login_required", False)
-            is_external = False
-
-            if "url" in item_data:
-                url = item_data["url"]
-                is_external = True
-            elif "slug" in item_data:
-                try:
-                    url = reverse('wiki:wiki_page', kwargs={'slug': item_data["slug"]})
-                except NoReverseMatch:
-                    pass
-            elif "url_name" in item_data:
-                try:
-                    url_args = item_data.get("url_args", [])
-                    url_kwargs = item_data.get("url_kwargs", {})
-                    url = reverse(item_data["url_name"], args=url_args, kwargs=url_kwargs)
-                except NoReverseMatch:
-                    pass
-
-            current_section["items"].append({
-                "text": text,
-                "url": url,
-                "login_required": login_required,
-                "is_external": is_external,
-                "slug": item_data.get("slug")
-            })
+        # 1. Check for explicit section_link_url (external or absolute)
+        if "section_link_url" in section_data:
+            section_url = section_data["section_link_url"]
+            section_is_external = True
+        # 2. Check for explicit section_link_slug
+        elif "section_link_slug" in section_data:
+            try:
+                section_url = reverse('wiki:wiki_page', kwargs={'slug': section_data["section_link_slug"]})
+            except NoReverseMatch:
+                pass # section_url remains None
+        # 3. Check for explicit section_link_url_name
+        elif "section_link_url_name" in section_data:
+            try:
+                url_args = section_data.get("section_link_url_args", [])
+                url_kwargs = section_data.get("section_link_url_kwargs", {})
+                section_url = reverse(section_data["section_link_url_name"], args=url_args, kwargs=url_kwargs)
+            except NoReverseMatch:
+                pass # section_url remains None
         
-        if current_section["items"]:
+        # 4. Fallback to first item's URL (only if no explicit section link was found and items exist)
+        elif "items" in section_data and isinstance(section_data["items"], list) and section_data["items"]:
+            first_item_data = section_data["items"][0]
+            if isinstance(first_item_data, dict):
+                if "url" in first_item_data:
+                    temp_url = first_item_data["url"]
+                    if temp_url and temp_url != "#": # Check if URL is not just a placeholder
+                        section_url = temp_url
+                        section_is_external = True # Assume external if 'url' key is used
+                elif "slug" in first_item_data:
+                    try:
+                        temp_url = reverse('wiki:wiki_page', kwargs={'slug': first_item_data["slug"]})
+                        if temp_url and temp_url != "#":
+                             section_url = temp_url
+                    except NoReverseMatch:
+                        pass
+                elif "url_name" in first_item_data:
+                    try:
+                        url_args = first_item_data.get("url_args", [])
+                        url_kwargs = first_item_data.get("url_kwargs", {})
+                        temp_url = reverse(first_item_data["url_name"], args=url_args, kwargs=url_kwargs)
+                        if temp_url and temp_url != "#":
+                            section_url = temp_url
+                    except NoReverseMatch:
+                        pass
+
+
+        current_section = {
+            "title": section_data["title"],
+            "items": [],
+            "title_color": section_data.get("title_color"),
+            "section_url": section_url,
+            "section_is_external": section_is_external
+        }
+
+        if "items" in section_data and isinstance(section_data["items"], list):
+            for item_data in section_data["items"]:
+                if not isinstance(item_data, dict) or "text" not in item_data:
+                    continue
+
+                text = item_data["text"]
+                item_url_val = "#" # Default to placeholder
+                item_is_external = False
+                circle_color = item_data.get("circle_color")
+
+                if "url" in item_data:
+                    item_url_val = item_data["url"]
+                    item_is_external = True
+                elif "slug" in item_data:
+                    try:
+                        item_url_val = reverse('wiki:wiki_page', kwargs={'slug': item_data["slug"]})
+                    except NoReverseMatch:
+                        pass
+                elif "url_name" in item_data:
+                    try:
+                        url_args = item_data.get("url_args", [])
+                        url_kwargs = item_data.get("url_kwargs", {})
+                        item_url_val = reverse(item_data["url_name"], args=url_args, kwargs=url_kwargs)
+                    except NoReverseMatch:
+                        pass
+                
+                item_dict = {
+                    "text": text,
+                    "url": item_url_val,
+                    "login_required": item_data.get("login_required", False),
+                    "is_external": item_is_external,
+                    "slug": item_data.get("slug"),
+                    "circle_color": circle_color
+                }
+                current_section["items"].append(item_dict)
+        
+        # Add section if it has a title (even if no items, it might be a linkable header)
+        if current_section["title"]:
             parsed_sections.append(current_section)
             
     return parsed_sections
@@ -141,17 +215,20 @@ def wiki_menu(request):
         
     custom_menu_sections = _parse_menu_data(menu_config_content, source_page_slug=menu_page_slug_val)
 
-    if not custom_menu_sections:
+    if not custom_menu_sections: # Fallback if parsing fails or returns empty
         custom_menu_sections = _parse_menu_data(DEFAULT_MENU_CONFIG, source_page_slug="DEFAULT_MENU_CONFIG_fallback")
-        if not custom_menu_sections:
+        if not custom_menu_sections: # Ultimate fallback
             try:
                 menu_config_page_url_for_error = reverse('wiki:wiki_page', kwargs={'slug': menu_page_slug_val})
             except Exception:
-                 menu_config_page_url_for_error = f"/wiki/{menu_page_slug_val}/"
+                 menu_config_page_url_for_error = f"/wiki/{menu_page_slug_val}/" # Basic fallback URL
             custom_menu_sections = [
                 {
                     "title": "Menu Config Error",
-                    "items": [{"text": "Check menu config.", "url": menu_config_page_url_for_error, "slug": menu_page_slug_val}]
+                    "items": [{"text": "Check menu config.", "url": menu_config_page_url_for_error, "slug": menu_page_slug_val, "circle_color": "red"}],
+                    "title_color": "red",
+                    "section_url": menu_config_page_url_for_error,
+                    "section_is_external": False
                 }
             ]
 
@@ -170,7 +247,6 @@ def wiki_menu(request):
                 pass
     except Exception:
         pass
-
 
     return {
         "custom_wiki_menu_sections": custom_menu_sections,

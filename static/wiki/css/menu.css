@@ -218,3 +218,29 @@
         padding: 0;
     }
 }
+
+#menu h3 a.section-title-link {
+    text-decoration: none;
+    color: inherit; /* Inherit color from h3, which might have an inline style */
+    display: inline-block; /* Allows transform for smoother animation */
+    transition: transform 0.2s ease-in-out, color 0.2s ease-in-out; /* Smooth transition for hover */
+    /* If you want to ensure the link takes up the full width of the h3 for clickability:
+    display: block; 
+    width: 100%;
+    */
+}
+
+#menu h3 a.section-title-link:hover {
+    transform: scale(1.03); /* Example: Slight zoom on hover */
+    /* You could also change text-decoration or add a subtle shadow, e.g.:
+    text-decoration: underline; 
+    text-shadow: 0 0 1px currentColor; 
+    */
+}
+
+/* Ensure default circle color is defined if not already */
+.circle {
+    /* ... existing styles ... */
+    background-color: var(--secondary-text-color); /* Default color if not overridden by inline style */
+    transition: background-color 0.2s ease-in-out; /* Smooth color transition if needed */
+}
