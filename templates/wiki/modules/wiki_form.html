@@ -55,9 +55,9 @@
     </form> 
 
             {% if page and action == 'Edit' %}
-            <form action="{% url 'wiki:page_delete' page.slug %}" method="post" style="display: inline; margin: 0;" id="deletePageSpecificForm">
+            <form action="{% url 'wiki:page_delete' page.slug %}" method="post" style="display: inline; margin: 0;" id="deleteForm">
                 {% csrf_token %}
-                <button type="button" class="delete hold-to-delete-page-btn" id="deletePageBtn" 
+                <button type="button" class="delete hold-to-delete-btn" id="deleteBtn" 
                         data-default-text="Delete This Page" 
                         data-holding-text="Hold to Delete..." 
                         data-ready-text="Release to Delete!">
@@ -165,7 +165,7 @@
                 contentTextarea.style.height = (contentTextarea.scrollHeight) + 'px';
 
                 if (event || (valueToProcess.length !== currentValue.length && !event) ) {
-                    if (event && event.inputType === 'insertLineBreak') { }
+                    if (event && event.inputType === 'insertLineBreak') { /* Potentially special handling */ }
                     try {
                         const textLength = contentTextarea.value.length;
                         if (newCursorPos > textLength) { newCursorPos = textLength; }
@@ -174,7 +174,7 @@
                         }
                     } catch (e) {
                         const endPos = contentTextarea.value.length;
-                        try { contentTextarea.setSelectionRange(endPos, endPos); } catch (e2) { }
+                        try { contentTextarea.setSelectionRange(endPos, endPos); } catch (e2) { /* ignore secondary error */ }
                     }
                 }
                 previousValue = contentTextarea.value;
@@ -191,20 +191,20 @@
             contentTextarea.addEventListener('input', autoResizeAndManageLines);
         }
 
-        const deletePageBtn = document.getElementById('deletePageBtn');
-        const deletePageSpecificForm = document.getElementById('deletePageSpecificForm');
+        const deleteBtn = document.getElementById('deleteBtn');
+        const deleteForm = document.getElementById('deleteForm');
 
-        if (deletePageBtn && deletePageSpecificForm) {
+        if (deleteBtn && deleteForm) {
             const HOLD_DURATION_PAGE = 5000;
             let pageActionTimeoutId = null;
             let pageAnimationFrameId = null;
             let isHoldingPageDelete = false;
 
-            const progressFillSpan = deletePageBtn.querySelector('.progress-fill');
-            const btnTextSpan = deletePageBtn.querySelector('.btn-text');
-            const defaultText = deletePageBtn.dataset.defaultText || 'Delete This Page';
-            const holdingText = deletePageBtn.dataset.holdingText || 'Hold to Delete...';
-            const readyText = deletePageBtn.dataset.readyText || 'Release to Delete!';
+            const progressFillSpan = deleteBtn.querySelector('.progress-fill');
+            const btnTextSpan = deleteBtn.querySelector('.btn-text');
+            const defaultText = deleteBtn.dataset.defaultText || 'Delete This Page';
+            const holdingText = deleteBtn.dataset.holdingText || 'Hold to Delete...';
+            const readyText = deleteBtn.dataset.readyText || 'Release to Delete!';
 
             const setButtonText = (textKey) => {
                 if (!btnTextSpan) return;
@@ -219,13 +219,13 @@
                 cancelAnimationFrame(pageAnimationFrameId);
                 pageActionTimeoutId = null;
                 pageAnimationFrameId = null;
-                deletePageBtn.classList.remove('is-filling', 'is-ready-to-delete');
+                deleteBtn.classList.remove('is-filling', 'is-ready-to-delete');
                 setButtonText('default');
                 
-                const wasHolding = isHoldingPageDelete; // Capture before resetting
+                const wasHolding = isHoldingPageDelete;
                 isHoldingPageDelete = false;
 
-                if (performNudge && progressFillSpan && wasHolding) { // Only nudge if it was a brief hold/click
+                if (performNudge && progressFillSpan && wasHolding) {
                     progressFillSpan.style.transition = 'none';
                     progressFillSpan.style.width = '15%';
                     requestAnimationFrame(() => {
@@ -245,7 +245,7 @@
                 if (isHoldingPageDelete) return;
                 isHoldingPageDelete = true;
 
-                deletePageBtn.classList.add('is-filling');
+                deleteBtn.classList.add('is-filling');
                 if (progressFillSpan) {
                     progressFillSpan.style.transition = 'none';
                     progressFillSpan.style.width = '0%';
@@ -265,8 +265,8 @@
                     if (elapsedTime < HOLD_DURATION_PAGE) {
                         pageAnimationFrameId = requestAnimationFrame(animatePageFill);
                     } else {
-                        if (!deletePageBtn.classList.contains('is-ready-to-delete')) {
-                            deletePageBtn.classList.add('is-ready-to-delete');
+                        if (!deleteBtn.classList.contains('is-ready-to-delete')) {
+                            deleteBtn.classList.add('is-ready-to-delete');
                             setButtonText('ready');
                         }
                     }
@@ -275,7 +275,7 @@
 
                 pageActionTimeoutId = setTimeout(() => {
                     if (isHoldingPageDelete) {
-                        deletePageBtn.classList.add('is-ready-to-delete');
+                        deleteBtn.classList.add('is-ready-to-delete');
                         setButtonText('ready');
                     }
                 }, HOLD_DURATION_PAGE);
@@ -284,13 +284,13 @@
             const endPageHold = (isReleasedOnButtonContext) => {
                 if (!isHoldingPageDelete) return;
 
-                const wasReadyForDelete = deletePageBtn.classList.contains('is-ready-to-delete');
-                const currentlyWasHolding = isHoldingPageDelete; // Capture before reset by resetPageHoldState
+                const wasReadyForDelete = deleteBtn.classList.contains('is-ready-to-delete');
+                const currentlyWasHolding = isHoldingPageDelete;
 
                 if (isReleasedOnButtonContext && wasReadyForDelete) {
-                    isHoldingPageDelete = false; // Stop processing before confirm
+                    isHoldingPageDelete = false;
                     if (confirm('Are you sure you want to delete this page: \'{{ page.title|escapejs }}\'? This action cannot be undone.')) {
-                        deletePageSpecificForm.submit();
+                        deleteForm.submit();
                         return; 
                     } else {
                         resetPageHoldState(false); 
@@ -302,16 +302,16 @@
                 }
             };
             
-            deletePageBtn.addEventListener('mousedown', startPageHold);
-            deletePageBtn.addEventListener('touchstart', (e) => startPageHold(e), { passive: false });
+            deleteBtn.addEventListener('mousedown', startPageHold);
+            deleteBtn.addEventListener('touchstart', (e) => startPageHold(e), { passive: false });
             
-            deletePageBtn.addEventListener('mouseleave', () => { if(isHoldingPageDelete && event.buttons === 1) resetPageHoldState(false); });
-            deletePageBtn.addEventListener('touchcancel', () => { if(isHoldingPageDelete) resetPageHoldState(false); });
-            deletePageBtn.addEventListener('blur', () => { if(isHoldingPageDelete) resetPageHoldState(false); });
+            deleteBtn.addEventListener('mouseleave', () => { if(isHoldingPageDelete && event.buttons === 1) resetPageHoldState(false); });
+            deleteBtn.addEventListener('touchcancel', () => { if(isHoldingPageDelete) resetPageHoldState(false); });
+            deleteBtn.addEventListener('blur', () => { if(isHoldingPageDelete) resetPageHoldState(false); });
             
             document.addEventListener('mouseup', (event) => {
                 if (isHoldingPageDelete) {
-                    const isReleasedOnButton = event.target === deletePageBtn || deletePageBtn.contains(event.target);
+                    const isReleasedOnButton = event.target === deleteBtn || deleteBtn.contains(event.target);
                     endPageHold(isReleasedOnButton);
                 }
             });
@@ -321,7 +321,7 @@
                     for (let i = 0; i < event.changedTouches.length; i++) {
                         const touch = event.changedTouches[i];
                         const endTarget = document.elementFromPoint(touch.clientX, touch.clientY);
-                        if (endTarget === deletePageBtn || deletePageBtn.contains(endTarget)) {
+                        if (endTarget === deleteBtn || deleteBtn.contains(endTarget)) {
                             isReleasedOnButton = true;
                             break;
                         }

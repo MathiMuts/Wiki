@@ -1,15 +1,16 @@
+import os
 import shutil
 from django.db import models
 from django.urls import reverse
 from django.utils.text import slugify
 from django.conf import settings
-import os
 
 from django.core.files.base import ContentFile
 from io import BytesIO
 import subprocess
 import tempfile
 import markdown2
+# from . import utils # We will import utils locally in the method to avoid circular imports
 
 class WikiPage(models.Model):
     title = models.CharField(max_length=200, unique=True)
@@ -50,14 +51,14 @@ class WikiPage(models.Model):
     def delete(self, *args, **kwargs):
         page_media_dir = self.get_media_directory_path()
 
-        super().delete(*args, **kwargs)
+        super().delete(*args, **kwargs) 
 
         if page_media_dir and os.path.exists(page_media_dir) and os.path.isdir(page_media_dir):
             try:
-                if not os.listdir(page_media_dir):
+                if not os.listdir(page_media_dir): 
                     os.rmdir(page_media_dir)
                 else:
-                    shutil.rmtree(page_media_dir)
+                    shutil.rmtree(page_media_dir) 
                     
             except OSError as e:
                 pass
@@ -71,8 +72,6 @@ class WikiPage(models.Model):
         return os.path.join(settings.MEDIA_ROOT, 'wiki_files', self.slug)
 
 def wiki_page_file_path(instance, filename):
-    # file will be uploaded to MEDIA_ROOT/wiki_files/<page_slug>/<sanitized_filename>
-
     page_slug = instance.page.slug if instance.page else 'unknown_page'
     _original_name_part, original_ext = os.path.splitext(filename)
     original_ext = original_ext.lower()
@@ -117,17 +116,19 @@ class WikiFile(models.Model):
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        if self.file:
-            if hasattr(self.file, 'path') and self.file.path and os.path.isfile(self.file.path):
-                try:
-                    os.remove(self.file.path)
-                except OSError:
-                    pass 
-        super().delete(*args, **kwargs)
+        file_path_to_delete = None
+        if self.file and hasattr(self.file, 'path') and self.file.path:
+            file_path_to_delete = self.file.path
+        
+        super().delete(*args, **kwargs) 
+
+        if file_path_to_delete and os.path.isfile(file_path_to_delete):
+            try:
+                os.remove(file_path_to_delete)
+            except OSError:
+                pass 
 
 def exam_page_pdf_path(instance, filename):
-    # file will be uploaded to MEDIA_ROOT/wiki_exams/<parent_page_slug>/<exam_slug>.pdf
-
     parent_slug = instance.parent_page.slug if instance.parent_page else 'unknown_parent'
     exam_slug = instance.slug if instance.slug else 'unknown_exam'
     return f'wiki_exams/{parent_slug}/{exam_slug}.pdf'
@@ -170,33 +171,33 @@ class ExamPage(models.Model):
     def _get_base_pdf_filename(self):
         return f"{self.slug or slugify(self.title) or 'exam'}.pdf"
 
-    def compile_and_save_pdf(self, force_recompile=False): # FIXME: consider async compiling to pdf as this can take time
-        """
-        Compiles the content to PDF based on page_type and saves it to pdf_file.
-        Returns (True, "Success message") or (False, "Error message").
-        """
+    def compile_and_save_pdf(self, force_recompile=False):
         if not self.content.strip():
-            if self.pdf_file: # Delete old PDF if content is now empty
-                if os.path.exists(self.pdf_file.path): os.remove(self.pdf_file.path)
-                self.pdf_file = None
-                super().save(update_fields=['pdf_file']) # Use super to avoid recursion
+            if self.pdf_file and self.pdf_file.name and hasattr(self.pdf_file, 'path') and os.path.exists(self.pdf_file.path):
+                os.remove(self.pdf_file.path)
+            self.pdf_file = None 
+            if 'pdf_file' not in getattr(self, '_being_saved_fields', []): 
+                 super().save(update_fields=['pdf_file'])
             return False, "Content is empty, PDF not generated."
 
-        # Simplified check: if content modified time is newer than pdf file mod time, or no pdf
         pdf_needs_update = True
-        if self.pdf_file and os.path.exists(self.pdf_file.path) and not force_recompile:
-            pdf_mtime = os.path.getmtime(self.pdf_file.path)
-            # Compare with updated_at of the ExamPage instance itself
-            if self.updated_at and self.updated_at.timestamp() < pdf_mtime:
-                pdf_needs_update = False
+        if self.pdf_file and self.pdf_file.name and hasattr(self.pdf_file, 'path') and os.path.exists(self.pdf_file.path) and not force_recompile:
+            try:
+                pdf_mtime = os.path.getmtime(self.pdf_file.path)
+                if self.updated_at and self.updated_at.timestamp() < pdf_mtime:
+                    pdf_needs_update = False
+            except OSError: 
+                 pdf_needs_update = True 
         
         if not pdf_needs_update and not force_recompile:
             return True, "PDF is already up-to-date."
 
-        # Clear old PDF first to ensure a fresh one is generated or it's removed on failure
-        if self.pdf_file and os.path.exists(self.pdf_file.path):
-            os.remove(self.pdf_file.path)
-        self.pdf_file = None # Will be re-assigned on success
+        if self.pdf_file and self.pdf_file.name and hasattr(self.pdf_file, 'path') and os.path.exists(self.pdf_file.path):
+            try:
+                os.remove(self.pdf_file.path)
+            except OSError:
+                pass 
+        self.pdf_file.name = None 
 
         pdf_content_bytes = None
         temp_dir_for_latex = None
@@ -208,13 +209,11 @@ class ExamPage(models.Model):
                 with open(tex_file_path, 'w', encoding='utf-8') as f:
                     f.write(self.content)
 
-                # Run pdflatex (might need to run twice for TOC/references)
-                # Ensure pdflatex is in your system's PATH
                 cmd = ['pdflatex', '-interaction=nonstopmode', '-output-directory', temp_dir_for_latex, tex_file_path]
-                process_result = subprocess.run(cmd, capture_output=True, text=False, timeout=30) # 30s timeout
-                # Run again for references if first pass was okay
-                if process_result.returncode == 0:
-                    process_result = subprocess.run(cmd, capture_output=True, text=False, timeout=30)
+                # Increased timeout as per your snippet
+                process_result = subprocess.run(cmd, capture_output=True, text=False, timeout=300)
+                if process_result.returncode == 0: # Run twice for references, ToC etc.
+                    process_result = subprocess.run(cmd, capture_output=True, text=False, timeout=300) 
 
                 generated_pdf_path = os.path.join(temp_dir_for_latex, 'document.pdf')
                 if process_result.returncode == 0 and os.path.exists(generated_pdf_path):
@@ -225,87 +224,146 @@ class ExamPage(models.Model):
                     log_output = "No log file found."
                     if os.path.exists(log_path):
                         with open(log_path, 'r', encoding='utf-8', errors='ignore') as log_f:
-                            log_output = log_f.read()[-1000:] # Last 1000 chars
-                    return False, f"LaTeX compilation failed. Error: {process_result.stderr.decode(errors='ignore') if process_result.stderr else 'Unknown error'}. Log: ...{log_output}"
+                            log_output = log_f.read()[-1000:] 
+                    stderr_output = process_result.stderr.decode(errors='ignore') if process_result.stderr else 'Unknown error'
+                    # If LaTeX fails, ensure pdf_file field (already None in memory) is saved as None to DB
+                    if self.pk:
+                        super().save(update_fields=['pdf_file'])
+                    return False, f"LaTeX compilation failed. Error: {stderr_output}. Log: ...{log_output}"
 
             elif self.page_type == 'markdown':
-                # Using WeasyPrint for Markdown to PDF
                 try:
                     from weasyprint import HTML
-                    # You might want to use your existing markdown preprocessing here
-                    # html_output = markdown2.markdown(self.content, extras=["fenced-code-blocks", "tables", ...])
-                    # For simplicity, a basic conversion:
-                    html_output = markdown2.markdown(self.content, extras=["fenced-code-blocks", "tables", "header-ids"])
+                    from . import utils as wiki_utils # Local import for utils
+
+                    processed_markdown_content = wiki_utils.preprocess_markdown_with_links(
+                        self.content,
+                        current_page=self.parent_page 
+                    )
                     
-                    # Basic CSS for better PDF output
+                    html_output = markdown2.markdown(
+                        processed_markdown_content,
+                        extras=["fenced-code-blocks", "tables", "header-ids", "break-on-newline"]
+                    )
+                    
                     css_for_pdf = """
                     @page { size: A4; margin: 2cm; }
-                    body { font-family: sans-serif; line-height: 1.5; }
-                    h1, h2, h3, h4, h5, h6 { page-break-after: avoid; }
-                    pre, code { font-family: monospace; }
-                    table { border-collapse: collapse; width: 100%; }
-                    th, td { border: 1px solid #ccc; padding: 0.5em; }
-                    img { max-width: 100%; height: auto; }
+                    body { font-family: sans-serif; line-height: 1.5; font-size: 10pt; }
+                    h1, h2, h3, h4, h5, h6 { page-break-after: avoid; margin-top: 1.5em; margin-bottom: 0.5em; }
+                    h1 {font-size: 2em;} h2 {font-size: 1.75em;} h3 {font-size: 1.5em;}
+                    h4 {font-size: 1.25em;} h5 {font-size: 1.1em;} h6 {font-size: 1em;}
+                    p, ul, ol, blockquote { margin-bottom: 1em; }
+                    pre { 
+                        font-family: monospace; 
+                        background-color: #f0f0f0; 
+                        padding: 1em; 
+                        border-radius: 4px; 
+                        overflow-x: auto; 
+                        page-break-inside: avoid;
+                    }
+                    code { 
+                        font-family: monospace;
+                        background-color: #f0f0f0;
+                        padding: 0.1em;
+                        border-radius: 1px;
+                        overflow-x: auto;
+                        page-break-inside: avoid;
+                    }
+                    table { border-collapse: collapse; width: 100%; margin-bottom: 1em; page-break-inside: avoid; }
+                    th, td { border: 1px solid #ccc; padding: 0.5em; text-align: left; }
+                    th { background-color: #f8f8f8; }
+                    img { max-width: 100%; height: auto; display: block; margin-bottom: 1em; }
+                    a { color: #007bff; text-decoration: none; }
+                    a:hover { text-decoration: underline; }
+                    blockquote { border-left: 3px solid #ccc; padding-left: 1em; margin-left: 0; color: #555; }
+                    hr { border: 0; border-top: 1px solid #ccc; margin: 2em 0; }
                     """
                     
                     pdf_buffer = BytesIO()
-                    HTML(string=f"<html><head><style>{css_for_pdf}</style></head><body>{html_output}</body></html>").write_pdf(pdf_buffer)
+                    full_html = f"<html><head><meta charset='UTF-8'><style>{css_for_pdf}</style></head><body>{html_output}</body></html>"
+                    HTML(string=full_html).write_pdf(pdf_buffer)
                     pdf_content_bytes = pdf_buffer.getvalue()
                 except ImportError:
-                    return False, "Markdown to PDF requires WeasyPrint. Please run: pip install WeasyPrint"
+                    # If WeasyPrint is missing, ensure pdf_file field (already None in memory) is saved as None to DB
+                    if self.pk:
+                        super().save(update_fields=['pdf_file'])
+                    return False, "Markdown to PDF requires WeasyPrint. Please install it: pip install WeasyPrint"
                 except Exception as e_md:
+                    # If Markdown conversion fails, ensure pdf_file field (already None in memory) is saved as None to DB
+                    if self.pk:
+                        super().save(update_fields=['pdf_file'])
                     return False, f"Markdown to PDF conversion error: {e_md}"
             
+            # After attempting compilation for either type:
             if pdf_content_bytes:
-                self.pdf_file.save(self._get_base_pdf_filename(), ContentFile(pdf_content_bytes), save=False) # save=False to avoid recursion
-                super().save(update_fields=['pdf_file']) # Save only pdf_file field now
+                # self.pdf_file.name is currently None (or should be, from logic before this try block)
+                # This saves the physical file and updates self.pdf_file.name in memory.
+                self.pdf_file.save(self._get_base_pdf_filename(), ContentFile(pdf_content_bytes), save=False)
+                
+                if self.pk:
+                    # Persist the newly saved PDF file reference to the database.
+                    # This calls models.Model.save(), bypassing this model's save() override.
+                    super().save(update_fields=['pdf_file']) 
                 return True, "PDF compiled and saved successfully."
             else:
-                # This case should ideally be caught by specific errors above
-                return False, "PDF content could not be generated (no specific error)."
+                # This case means compilation (LaTeX or Markdown) finished without raising an explicit error above,
+                # but produced no pdf_content_bytes.
+                # self.pdf_file.name should already be None in memory. Persist this.
+                if self.pk:
+                    super().save(update_fields=['pdf_file']) # Ensure DB reflects no PDF
+                return False, "PDF content could not be generated (compilation produced no data but no specific error)."
 
         except subprocess.TimeoutExpired:
-            return False, "PDF compilation timed out."
+            # If LaTeX times out, ensure pdf_file field (already None in memory) is saved as None to DB
+            if self.pk:
+                super().save(update_fields=['pdf_file'])
+            return False, "PDF compilation timed out (e.g., LaTeX). Please check your content for complexity or errors."
         except Exception as e_compile:
+            # General catch-all for other errors during the process
+            # Ensure pdf_file field (already None in memory) is saved as None to DB
+            if self.pk:
+                super().save(update_fields=['pdf_file'])
             return False, f"General PDF compilation error: {str(e_compile)}"
         finally:
             if temp_dir_for_latex and os.path.exists(temp_dir_for_latex):
                 shutil.rmtree(temp_dir_for_latex)
 
-
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.title)
+            self.slug = slugify(self.title) if self.title else 'exam'
         
-        # Ensure slug uniqueness per parent page
         original_slug = self.slug
         counter = 1
-        while ExamPage.objects.filter(parent_page=self.parent_page, slug=self.slug).exclude(pk=self.pk).exists():
+        queryset = ExamPage.objects.filter(parent_page=self.parent_page, slug=self.slug)
+        if self.pk: 
+            queryset = queryset.exclude(pk=self.pk)
+            
+        while queryset.exists():
             self.slug = f"{original_slug}-{counter}"
             counter += 1
+            queryset = ExamPage.objects.filter(parent_page=self.parent_page, slug=self.slug)
+            if self.pk:
+                queryset = queryset.exclude(pk=self.pk)
         
-        # Decide if PDF needs recompilation
-        # This is a bit tricky: when is `updated_at` set? Before or after this save?
-        # A simple check: if 'content' or 'page_type' are in update_fields or it's a new instance.
-        # Or, just always try to recompile if the save method is called explicitly for an update.
-        # The compile_and_save_pdf method itself now has logic to check if update is needed.
-        
-        # Save the model fields first
         super().save(*args, **kwargs)
 
-        # We'll call compile_and_save_pdf from the view after form.save()
-        # to ensure the instance (and its ID/slugs) is fully saved before file operations.
-        # If called here directly, and `upload_to` depends on instance properties that are not yet saved, it can fail.
-
     def delete(self, *args, **kwargs):
-        if self.pdf_file and os.path.exists(self.pdf_file.path):
-            os.remove(self.pdf_file.path)
-        super().delete(*args, **kwargs)
+        pdf_path_to_delete = None
+        if self.pdf_file and hasattr(self.pdf_file, 'path') and self.pdf_file.path:
+            pdf_path_to_delete = self.pdf_file.path
 
-    def get_absolute_url(self): # For editing
+        super().delete(*args, **kwargs) 
+
+        if pdf_path_to_delete and os.path.exists(pdf_path_to_delete):
+            try:
+                os.remove(pdf_path_to_delete)
+            except OSError:
+                pass
+
+    def get_absolute_url(self): 
         return reverse('wiki:exam_edit', kwargs={'parent_slug': self.parent_page.slug, 'exam_slug': self.slug})
 
     def get_download_url(self):
-        if self.pdf_file:
+        if self.pdf_file and self.pdf_file.name: 
             return reverse('wiki:exam_download', kwargs={'parent_slug': self.parent_page.slug, 'exam_slug': self.slug})
         return None

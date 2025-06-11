@@ -206,7 +206,7 @@ input[type="file"]::-webkit-file-upload-button, input[type="file"]::file-selecto
     
 }
 
-.hold-to-delete-page-btn {
+.hold-to-delete-btn {
     position: relative;
     overflow: hidden;
     cursor: pointer;
@@ -218,14 +218,14 @@ input[type="file"]::-webkit-file-upload-button, input[type="file"]::file-selecto
     text-align: center;
 }
 
-.hold-to-delete-page-btn .btn-text {
+.hold-to-delete-btn .btn-text {
     position: relative;
     z-index: 2;
     pointer-events: none;
     transition: opacity 0.2s ease-in-out;
 }
 
-.hold-to-delete-page-btn .progress-fill {
+.hold-to-delete-btn .progress-fill {
     position: absolute;
     top: 0;
     left: 0;
@@ -237,7 +237,7 @@ input[type="file"]::-webkit-file-upload-button, input[type="file"]::file-selecto
     z-index: 1;
 }
 
-.hold-to-delete-page-btn.is-ready-to-delete .progress-fill {
+.hold-to-delete-btn.is-ready-to-delete .progress-fill {
     opacity: 0.85;
 }
 

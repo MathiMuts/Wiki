@@ -40,16 +40,19 @@
 
     <hr style="margin: 3rem 0 2rem 0;">
 
-    {% comment %} TODO: integrate with files {% endcomment %}
     {% if exam_subpages %}
     <div class="wiki-subpages section-card-plain">
         <h2>Exams</h2>
-        <ul class="file-list"> {# Reuse styling from file-list #}
+        <ul class="file-list">
             {% for exam in exam_subpages %}
                 <li class="file-item">
-                    <a href="{{ exam.pdf_file.url }}" target="_blank" class="file-link">{{ exam.title }}</a>
+                    {% if exam.pdf_file %}
+                        <a href="{{ exam.pdf_file.url }}" target="_blank" class="file-link">{{ exam.title }}</a>
+                    {% else %}
+                        <div style="font-weight: 500; color: var(--secondary-text-color)">{{ exam.title }}</div>
+                    {% endif %}
                     <small class="file-meta"> ({{ exam.get_page_type_display }})
-                        - Last updated: {{ exam.updated_at|date:"M d, Y H:i" }}
+                        - Last updated: {{ exam.updated_at|date:"M d, Y" }}
                         {% if exam.last_modified_by %}by {{ exam.last_modified_by.username }}{% endif %}
                     </small>
                     
@@ -68,19 +71,18 @@
             {% endfor %}
         </ul>
     </div>
-    {% elif user.is_authenticated %} {# Show create link if logged in and no exams exist #}
-    <hr style="margin: 3rem 0 2rem 0;">
+    {% elif user.is_authenticated %}
     <div class="wiki-subpages section-card-plain">
         <h2>Exams / Sub-Pages</h2>
-        <p>No exams or sub-pages created yet. <a href="{% url 'wiki:exam_create' parent_slug=page.slug %}">Create one?</a></p>
+        <p>No exams or sub-pages created yet. <a class="wikilink" href="{% url 'wiki:exam_create' parent_slug=page.slug %}">Create one?</a></p>
     </div>
-    <hr style="margin: 3rem 0 2rem 0;">
     {% endif %}
 
 
 
 
     {% if page_files %}
+    <hr style="margin: 3rem 0 2rem 0;">
     <div class="wiki-attachments section-card-plain">
         <h2>Attached Files</h2>
         <ul class="file-list">
@@ -88,7 +90,7 @@
                 <li class="file-item">
                     <a href="{{ file_attachment.file.url }}" target="_blank" class="file-link">{{ file_attachment.filename_display }}</a>
                     <small class="file-meta">
-                        - Uploaded on {{ file_attachment.uploaded_at|date:"M d, Y H:i" }}
+                        - Uploaded: {{ file_attachment.uploaded_at|date:"M d, Y" }}
                         {% if file_attachment.uploaded_by %}
                             by {{ file_attachment.uploaded_by.username }}
                         {% endif %}
