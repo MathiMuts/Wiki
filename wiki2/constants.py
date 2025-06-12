@@ -241,3 +241,25 @@ a:hover { text-decoration: underline; }
 blockquote { border-left: 3px solid #ccc; padding-left: 1em; margin-left: 0; color: #555; }
 hr { border: 0; border-top: 1px solid #ccc; margin: 2em 0; }
 """
+
+CODE_PATTERN_RE = re.compile(
+    r"("
+    r"(?:^```[^\n]*\n(?:.|\n)*?^\s*```$)"
+    r"|(?:^~~~[^\n]*\n(?:.|\n)*?^\s*~~~$)"
+    r"|(?P<ticks>`+)(?:(?!(?P=ticks)).|\n)*?(?P=ticks)"
+    r")",
+    re.MULTILINE
+)
+
+WIKILINK_RE = re.compile(r"\[\[(?:([^|\]]+)\|)?([^\]]+)\]\]")
+
+STANDARD_MARKDOWN_LINK_RE = re.compile(
+    r"(?<!\!)"
+    r"\[([^\]]+)\]"
+    r"\("
+    r"([^)\s]+?)"
+    r"(?:\s+(['\"])(.*?)\3)?"
+    r"\)"
+)
+
+MARKDOWN_IMAGE_RE = re.compile(r"!\[(.*?)\]\((.*?)(?:\s+(['\"])(.*?)\3)?\)")

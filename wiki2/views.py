@@ -320,7 +320,6 @@ def exam_create(request, parent_slug):
         'exam': None,
     })
 
-
 @login_required
 def exam_edit(request, parent_slug, exam_slug):
     parent_page = get_object_or_404(WikiPage, slug=parent_slug)

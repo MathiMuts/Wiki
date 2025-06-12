@@ -12,25 +12,6 @@ from django.utils.html import escape
 from django.conf import settings
 from . import constants
 
-CODE_PATTERN_RE = re.compile(
-    r"("
-    r"(?:^```[^\n]*\n(?:.|\n)*?^\s*```$)"
-    r"|(?:^~~~[^\n]*\n(?:.|\n)*?^\s*~~~$)"
-    r"|(?P<ticks>`+)(?:(?!(?P=ticks)).|\n)*?(?P=ticks)"
-    r")",
-    re.MULTILINE
-)
-WIKILINK_RE = re.compile(r"\[\[(?:([^|\]]+)\|)?([^\]]+)\]\]")
-STANDARD_MARKDOWN_LINK_RE = re.compile(
-    r"(?<!\!)"
-    r"\[([^\]]+)\]"
-    r"\("
-    r"([^)\s]+?)"
-    r"(?:\s+(['\"])(.*?)\3)?"
-    r"\)"
-)
-MARKDOWN_IMAGE_RE = re.compile(r"!\[(.*?)\]\((.*?)(?:\s+(['\"])(.*?)\3)?\)")
-
 def escape_markdown_chars(text):
     if not text:
         return ""
@@ -76,7 +57,6 @@ def wikilink_replacer_factory(current_page=None):
                 create_url = reverse('wiki:page_create') + f'?title={safe_target_for_url}'
                 return f'<a href="{create_url}" class="wikilink-missing" title="Create page: {escaped_target_group_for_title}">{display_link_text} (create)</a>'
     return wikilink_replacer
-
 
 def standard_markdown_link_replacer_factory(current_page=None):
     page_files_list = []
@@ -239,7 +219,6 @@ def markdown_image_replacer_factory(current_page=None):
 
     return image_replacer
 
-
 def preprocess_markdown_with_links(markdown_text, current_page=None):
     processed_parts = []
     last_end = 0
@@ -248,26 +227,25 @@ def preprocess_markdown_with_links(markdown_text, current_page=None):
     _markdown_image_replacer = markdown_image_replacer_factory(current_page)
     _standard_markdown_link_replacer = standard_markdown_link_replacer_factory(current_page)
 
-    for match in CODE_PATTERN_RE.finditer(markdown_text):
+    for match in constants.CODE_PATTERN_RE.finditer(markdown_text):
         text_before_code = markdown_text[last_end:match.start()]
         
-        processed_text_before = WIKILINK_RE.sub(_wikilink_replacer, text_before_code)
-        processed_text_before = MARKDOWN_IMAGE_RE.sub(_markdown_image_replacer, processed_text_before)
-        processed_text_before = STANDARD_MARKDOWN_LINK_RE.sub(_standard_markdown_link_replacer, processed_text_before)
+        processed_text_before = constants.WIKILINK_RE.sub(_wikilink_replacer, text_before_code)
+        processed_text_before = constants.MARKDOWN_IMAGE_RE.sub(_markdown_image_replacer, processed_text_before)
+        processed_text_before = constants.STANDARD_MARKDOWN_LINK_RE.sub(_standard_markdown_link_replacer, processed_text_before)
         
         processed_parts.append(processed_text_before)
         processed_parts.append(match.group(0))
         last_end = match.end()
 
     text_after_last_code = markdown_text[last_end:]
-    processed_text_after = WIKILINK_RE.sub(_wikilink_replacer, text_after_last_code)
-    processed_text_after = MARKDOWN_IMAGE_RE.sub(_markdown_image_replacer, processed_text_after)
-    processed_text_after = STANDARD_MARKDOWN_LINK_RE.sub(_standard_markdown_link_replacer, processed_text_after)
+    processed_text_after = constants.WIKILINK_RE.sub(_wikilink_replacer, text_after_last_code)
+    processed_text_after = constants.MARKDOWN_IMAGE_RE.sub(_markdown_image_replacer, processed_text_after)
+    processed_text_after = constants.STANDARD_MARKDOWN_LINK_RE.sub(_standard_markdown_link_replacer, processed_text_after)
     
     processed_parts.append(processed_text_after)
 
     return "".join(processed_parts)
-
 
 def qr_img(request):
     current_url = request.build_absolute_uri()
