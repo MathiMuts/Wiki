@@ -71,6 +71,48 @@
 
     {% if page %} 
     <hr style="margin: 40px 0 20px 0;">
+    {% if exam_subpages %}
+    <div class="wiki-subpages section-card-plain">
+        <h2>Exams</h2>
+        <ul class="file-list">
+            {% for exam in exam_subpages %}
+                <li class="file-item">
+                    {% if exam.pdf_file %}
+                        <a href="{{ exam.pdf_file.url }}" target="_blank" class="file-link">{{ exam.slug }}</a>
+                    {% else %}
+                        <div style="font-weight: 500; color: var(--secondary-text-color)">{{ exam.slug }}</div>
+                    {% endif %}
+                    <small class="file-meta"> ({{ exam.get_page_type_display }})
+                        - Last updated: {{ exam.updated_at|date:"M d, Y" }}
+                        {% if exam.last_modified_by %}by {{ exam.last_modified_by.username }}{% endif %}
+                    </small>
+                    
+                    {% if user.is_authenticated %}
+                    <a href="{{ exam.get_absolute_url }}" class="link button-danger-small subpage-edit-btn warn">Edit Exam</a>
+                    <a href="{{ exam.get_absolute_url }}" class="link button-danger-small subpage-delete-btn warn">Delete Exam</a>
+                    {% endif %}
+
+                    
+                    {% comment %} INFO: This block allows pdf downloads in edit page mode. This disabled to discurage entering edit mode for anything else than editing. {% endcomment %}
+                    {% comment %} {% if exam.get_download_url %}
+                        <a href="{{ exam.get_download_url }}" class="link button-danger-small subpage-download-btn">Download PDF</a>
+                    {% else %}
+                        <span class="button-disabled-small">PDF Not Ready</span>
+                    {% endif %} {% endcomment %}
+                </li>
+            {% empty %}
+                <li>No exams or sub-pages created yet for this page.</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% elif user.is_authenticated %}
+    <div class="wiki-subpages section-card-plain">
+        <h2>Exams / Sub-Pages</h2>
+        <p>No exams or sub-pages created yet. <a class="wikilink" href="{% url 'wiki:exam_create' parent_slug=page.slug %}">Create one?</a></p>
+    </div>
+    {% endif %}
+
+    <hr style="margin: 40px 0 20px 0;">
     <div class="wiki-attachments section-card-plain">
         <h2>Attached Files <span id="deleteStatusMessage" style="margin-left: 10px; font-size: 0.6em; font-weight: normal;"></span></h2>
         <ul class="file-list" id="fileListContainer">
@@ -117,9 +159,8 @@
                             </small>
                             <div class="form-field-error" id="fileUploadError_filename_slug" style="display:none;"></div>
                         </div>
+                        <button type="submit" class="edit" id="uploadFileBtn" style="max-height: 4rem; align-self: center; margin-bottom: 30px;">Upload File</button>
                     </div>
-                    
-                    <button type="submit" class="edit" style="margin-top:10px;" id="uploadFileBtn">Upload File</button>
                 </form>
             </div>
         {% endif %}

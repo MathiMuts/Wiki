@@ -15,3 +15,6 @@ Een extra dependency introduceren doe je met `uv add <naam-van-package>`. Dit wo
 ## Superuser
 usr: `Webteam`
 pwd: `Webt3am@Wiki2`
+
+## Possible security concerns:
+LaTeX is a very powerfull typesetting language. With the right knowledge, **remote code execution** can be achieved! To counteract this **some commands have been blacklisted** but this is **NOT a foolproof solution**. To fully secure ourselves, a docker enviroment with limited file-access and non-root running is advised.

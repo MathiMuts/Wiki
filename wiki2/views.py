@@ -10,7 +10,7 @@ from .forms import WikiPageForm, WikiFileForm, ExamPageForm
 from django.urls import reverse
 from django.http import Http404, HttpResponse, JsonResponse, FileResponse 
 from django.shortcuts import render, get_object_or_404, redirect
-
+from django.utils import timezone
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -322,6 +322,7 @@ def page_edit(request, slug):
     page = get_object_or_404(WikiPage, slug=slug)
     page_files = page.files.all().order_by('-uploaded_at')
     upload_form = WikiFileForm() 
+    exam_subpages = page.exam_subpages.all().order_by('created_at')
 
     if request.method == 'POST': 
         form = WikiPageForm(request.POST, instance=page)
@@ -340,6 +341,7 @@ def page_edit(request, slug):
         'action': 'Edit',
         'page_files': page_files,
         'upload_form': upload_form, 
+        'exam_subpages': exam_subpages,
     })
 
 @login_required
@@ -425,6 +427,7 @@ def page_delete_file(request, slug, file_id):
 @login_required
 def exam_create(request, parent_slug):
     parent_page = get_object_or_404(WikiPage, slug=parent_slug)
+    
     if request.method == 'POST':
         form = ExamPageForm(request.POST, parent_page=parent_page)
         if form.is_valid():
@@ -440,13 +443,25 @@ def exam_create(request, parent_slug):
                 messages.warning(request, f"Exam '{exam.title}' created, but PDF generation failed: {message}")
             return redirect(parent_page.get_absolute_url())
     else:
-        form = ExamPageForm(parent_page=parent_page)
+        now_str = timezone.now().strftime("%b %d, %Y")
+        default_slug_date_str = timezone.now().strftime("%d-%m-%Y")
+
+        default_title = f"Exam {parent_page.title}: {now_str}"
+        default_slug = f"{parent_page.slug}-{default_slug_date_str}"
+
+        initial_data = {
+            'title': default_title,
+            'slug': default_slug,
+        }
+        form = ExamPageForm(initial=initial_data, parent_page=parent_page)
     
     return render(request, 'wiki/modules/exam_form.html', {
         'form': form, 
         'parent_page': parent_page,
-        'action': 'Create'
+        'action': 'Create',
+        'exam': None,
     })
+
 
 @login_required
 def exam_edit(request, parent_slug, exam_slug):
