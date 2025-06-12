@@ -81,7 +81,7 @@ class ExamPageForm(forms.ModelForm):
                 'class': 'form-control input type-selector',
             }),
             'content': forms.Textarea(attrs={
-                'id': 'exam-form-content-textarea',
+                'id': 'wiki-form-content-textarea',
                 'rows': 15,
                 'class': 'form-control markdown-editor-area input',
                 'placeholder': 'Enter content here. PDF will be generated based on selected type.'
