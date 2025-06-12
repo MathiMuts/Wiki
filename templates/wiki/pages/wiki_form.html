@@ -1,0 +1,427 @@
+{% extends "../modules/_base.html" %}
+{% comment %} templates/wiki/pages/wiki_form.html {% endcomment %}
+ 
+{% block title%}{% if page %}{{ page.title }}{% else %}{{ action }} Page{% endif %} - Wiki{% endblock %}
+{% load static %}
+{% block content %}
+    <h1>{{ action }} Wiki Page{% if page %}: <strong class="page-meta">{{ page.title }}</strong>{% endif %}</h1>
+    
+    <form method="post" id="wikiPageForm" action=""> 
+        {% csrf_token %}
+
+        {% if page %}
+            <input type="hidden" id="original_slug" value="{{ page.slug }}">
+        {% endif %}
+
+        <div class="form-row-responsive">
+            <div class="form-group form-group-responsive">
+                <label for="{{ form.title.id_for_label }}">Title:</label>
+                {{ form.title }}
+                {% if form.title.errors %}
+                    <div class="form-field-error">{{ form.title.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group form-group-responsive">
+                <label for="{{ form.slug.id_for_label }}">Slug (URL Path):</label>
+                {{ form.slug }}
+                {% if form.slug.errors %}
+                    <div class="slug-error">
+                        <strong>Error:</strong> {{ form.slug.errors|join:", " }}
+                    </div>
+                {% endif %}
+                <div id="slugChangeWarning" class="slug-warning" style="display: none;">
+                    <strong>Important:</strong> Changing the slug alters the page's web address. 
+                    Any existing links or bookmarks pointing to the old address will no longer work.
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.content.id_for_label }}">Content (Markdown):</label>
+            {{ form.content }}
+        </div>
+        <p><small>Use Markdown for formatting. <a href="https://www.markdownguide.org/basic-syntax/" target="_blank" class="wikilink">Markdown Guide</a></small></p>
+        
+        <div class="actions edit-buttons">
+            <div>
+                <button type="submit" class="button-styled button-create"> 
+                    {% if action == 'Create' %}Create Page{% else %}Save Changes{% endif %}
+                </button>
+                <a href="{% if page %}{{ page.get_absolute_url }}{% else %}{% url 'wiki:wiki' %}{% endif %}" class="button-styled button-cancel">Cancel</a>
+            </div>
+    </form> 
+            {% if page and action == 'Edit' %}
+            <form action="{% url 'wiki:page_delete' page.slug %}" method="post" style="display: inline; margin: 0;" id="deletePageForm">
+                {% csrf_token %}
+                <button type="button" class="button-styled button-delete hold-to-delete-btn" id="deletePageBtn" 
+                        data-default-text="Delete This Page" 
+                        data-holding-text="Hold to Delete..." 
+                        data-ready-text="Release to Delete!">
+                    <span class="btn-text">Delete This Page</span>
+                    <span class="progress-fill"></span>
+                </button>
+            </form>
+            {% endif %}
+        </div>
+
+
+    {% if page %} 
+        {% include "../modules/_exam_subpages_list.html" with exam_subpages=exam_subpages user=user page=page display_mode="edit" parent_page_slug=page.slug %}
+
+        <hr style="margin: 40px 0 20px 0;">
+        <div class="wiki-attachments section-card-plain">
+            <h2>Attached Files <span id="deleteAttachmentStatusMessage" style="margin-left: 10px; font-size: 0.6em; font-weight: normal;"></span></h2>
+            <ul class="file-list" id="fileListContainer">
+                {% for file_attachment in page_files %}
+                    <li class="file-item" id="file-item-{{ file_attachment.id }}" data-filename-slug="{{ file_attachment.filename_slug }}">
+                        <a href="{{ file_attachment.file.url }}" target="_blank" class="file-link">{{ file_attachment.filename_display }}</a>
+                        <small class="file-meta">
+                            Uploaded on {{ file_attachment.uploaded_at|date:"M d, Y H:i" }}
+                            {% if file_attachment.uploaded_by %}
+                                by {{ file_attachment.uploaded_by.username }}
+                            {% endif %}
+                        </small>
+                        {% if user.is_authenticated %}
+                            <button type="button" class="button-danger-small file-delete-btn" 
+                                    data-file-id="{{ file_attachment.id }}" 
+                                    data-delete-url="{% url 'wiki:page_delete_file' page.slug file_attachment.id %}">
+                                Delete
+                            </button>
+                        {% endif %}
+                    </li>
+                {% empty %}
+                {% endfor %}
+            </ul>
+            <p id="noFilesMessage" style="display: {% if not page_files %}block{% else %}none{% endif %};">No files attached to this page yet.</p>
+
+            {% if user.is_authenticated and upload_form %}
+                <div class="upload-section">
+                    <h2 style="margin-top: 20px;">Upload New File <span id="uploadStatusMessage" style="margin-left: 10px; font-size: 1em; font-weight: normal;"></span></h2>
+                    <form id="fileUploadForm" enctype="multipart/form-data" class="upload-form">
+                        <div class="form-row-responsive file-upload-row"> 
+                            <div class="form-group form-group-responsive">
+                                <label for="{{ upload_form.file.id_for_label }}">{{ upload_form.file.label }}:</label>
+                                {{ upload_form.file }} 
+                                <div class="form-field-error" id="fileUploadError_file" style="display:none;"></div>
+                                {% if upload_form.file.help_text %}
+                                    <small class="form-text text-muted">{{ upload_form.file.help_text|safe }}</small>
+                                {% endif %}
+                            </div>
+
+                            <div class="form-group form-group-responsive">
+                                <label for="{{ upload_form.filename_slug.id_for_label }}">{{ upload_form.filename_slug.label }}:</label>
+                                {{ upload_form.filename_slug }} 
+                                <div class="form-field-error" id="fileUploadError_filename_slug" style="display:none;"></div>
+                            </div>
+                             <div style="align-self: flex-end;">
+                                <button type="submit" class="button-styled button-edit" id="uploadFileBtn">Upload File</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+    {% else %} 
+        <hr style="margin: 40px 0 20px 0;">
+        <div class="wiki-attachments section-card-plain">
+            <h2>Attached Files</h2>
+            <p>Create the page first to upload files.</p> 
+        </div>
+    {% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Page Title to Slug (if desired, not present in original for page slug)
+    const pageTitleInput = document.getElementById('{{ form.title.id_for_label }}');
+    const pageSlugInput = document.getElementById('{{ form.slug.id_for_label }}');
+    const originalSlugField = document.getElementById('original_slug');
+    const slugChangeWarning = document.getElementById('slugChangeWarning');
+
+    if (pageTitleInput && pageSlugInput) {
+        // Auto-slug generation from title (optional, add if desired for page slugs)
+        // pageTitleInput.addEventListener('input', function() {
+        //     if (pageSlugInput.value === '' || pageSlugInput.dataset.autoGenerated === 'true') {
+        //         pageSlugInput.value = slugify_js(this.value);
+        //         pageSlugInput.dataset.autoGenerated = 'true';
+        //     }
+        // });
+        // pageSlugInput.addEventListener('input', function() {
+        //     this.dataset.autoGenerated = 'false';
+        //     if (originalSlugField && this.value !== originalSlugField.value && slugChangeWarning) {
+        //         slugChangeWarning.style.display = 'block';
+        //     } else if (slugChangeWarning) {
+        //         slugChangeWarning.style.display = 'none';
+        //     }
+        // });
+        // if (pageSlugInput.value === '') { // Set initial state for autoGenerated
+        //     pageSlugInput.dataset.autoGenerated = 'true';
+        // }
+    }
+
+
+    // Initialize Auto-Resize for Main Content Textarea
+    const contentTextarea = document.getElementById('{{ form.content.id_for_label }}'); // Or specific ID 'wiki-form-content-textarea'
+    if (contentTextarea) {
+        initializeAutoResizeTextarea(contentTextarea, 3);
+    }
+
+    // Initialize Wiki Editor Enhancements
+    if (typeof initializeWikiEditorEnhancements === 'function' && contentTextarea) {
+        initializeWikiEditorEnhancements(contentTextarea, 4);
+    } else if (contentTextarea) {
+        console.warn('initializeWikiEditorEnhancements function not found.');
+    }
+
+    // Initialize Hold-to-Delete Button for Page
+    const deletePageBtn = document.getElementById('deletePageBtn');
+    const deletePageForm = document.getElementById('deletePageForm');
+    if (deletePageBtn && deletePageForm) {
+        const pageTitle = "{{ page.title|escapejs|default:"this page" }}";
+        initializeHoldToDeleteButton(deletePageBtn, deletePageForm, pageTitle);
+    }
+
+    // --- File Attachment Logic ---
+    const fileUploadForm = document.getElementById('fileUploadForm');
+    const fileListContainer = document.getElementById('fileListContainer');
+    const noFilesMessage = document.getElementById('noFilesMessage');
+    const uploadStatusMessage = document.getElementById('uploadStatusMessage');
+    const deleteAttachmentStatusMessage = document.getElementById('deleteAttachmentStatusMessage'); // Renamed for clarity
+    
+    const fileInput = document.getElementById('{{ upload_form.file.id_for_label }}'); 
+    const filenameSlugInput = document.getElementById('{{ upload_form.filename_slug.id_for_label }}');
+    const filenameSlugHelpText = document.getElementById('filenameSlugHelpText');
+
+    function getCsrfTokenFromMainForm() { // Get CSRF from the main page form
+        const csrfInput = document.querySelector('#wikiPageForm input[name="csrfmiddlewaretoken"]');
+        return csrfInput ? csrfInput.value : null;
+    }
+
+    function generateUniqueFilenameSlugForUpload(originalName) {
+        if (!originalName) return "";
+        const nameParts = originalName.split('.');
+        const extension = nameParts.length > 1 ? '.' + nameParts.pop() : ''; // Keep extension for display, slug is base
+        const nameWithoutExt = nameParts.join('.');
+        
+        let baseSlug = slugify_js(nameWithoutExt) || 'file'; // Use global slugify_js
+        
+        const existingSlugs = [];
+        if (fileListContainer) {
+            fileListContainer.querySelectorAll('li.file-item').forEach(item => {
+                if (item.dataset.filenameSlug) existingSlugs.push(item.dataset.filenameSlug);
+            });
+        }
+
+        let finalSlug = baseSlug;
+        let counter = 1;
+        // Ensure generated slug is unique among current attachments
+        while (existingSlugs.includes(finalSlug)) {
+            finalSlug = `${baseSlug}-${counter}`; // Use hyphen for counters
+            counter++;
+        }
+        return finalSlug;
+    }
+
+    if (fileInput && filenameSlugInput) { 
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const originalFilenameForSlug = this.files[0].name;
+                // Auto-generate slug only if filenameSlugInput is empty or was auto-generated
+                if (filenameSlugInput.value === '' || filenameSlugInput.dataset.autoGenerated === 'true') {
+                    const generatedSlug = generateUniqueFilenameSlugForUpload(originalFilenameForSlug);
+                    filenameSlugInput.value = generatedSlug;
+                    if(filenameSlugHelpText) filenameSlugHelpText.textContent = "Auto-generated. This will be the base name of your file.";
+                    filenameSlugInput.dataset.autoGenerated = 'true';
+                }
+            } else {
+                // Clear if no file selected, only if it was auto-generated
+                if (filenameSlugInput.dataset.autoGenerated === 'true') {
+                    filenameSlugInput.value = '';
+                }
+                if(filenameSlugHelpText) filenameSlugHelpText.textContent = "{% if upload_form.filename_slug.help_text %}{{ upload_form.filename_slug.help_text|safe|escapejs }}{% else %}Auto-generated from filename if left blank.{% endif %}";
+            }
+        });
+        filenameSlugInput.addEventListener('input', function() {
+            // If user types in slug field, it's no longer auto-generated
+            this.dataset.autoGenerated = 'false';
+        });
+        // Initial state for autoGenerated
+        if (filenameSlugInput.value === '') {
+            filenameSlugInput.dataset.autoGenerated = 'true';
+        }
+    }
+
+    if (fileUploadForm) { 
+         fileUploadForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            if (uploadStatusMessage) {
+                uploadStatusMessage.textContent = 'Uploading...';
+                uploadStatusMessage.style.color = 'inherit';
+            }
+            
+            const fileErrorEl = document.getElementById('fileUploadError_file');
+            const slugErrorEl = document.getElementById('fileUploadError_filename_slug');
+            if(fileErrorEl) { fileErrorEl.textContent = ''; fileErrorEl.style.display = 'none'; }
+            if(slugErrorEl) { slugErrorEl.textContent = ''; slugErrorEl.style.display = 'none'; }
+
+            const formData = new FormData(fileUploadForm);
+            const csrfToken = getCsrfTokenFromMainForm(); 
+            if (!csrfToken) { 
+                if (uploadStatusMessage) {
+                    uploadStatusMessage.textContent = 'Error: CSRF token missing.';
+                    uploadStatusMessage.style.color = 'red';
+                }
+                return; 
+            }
+            // Add CSRF token to FormData for AJAX request (some backends might need it in headers instead)
+            // formData.append('csrfmiddlewaretoken', csrfToken); // If needed in body
+
+            const uploadUrl = "{% if page %}{% url 'wiki:page_upload_file' page.slug %}{% endif %}";
+            if (!uploadUrl) {
+                if (uploadStatusMessage) {
+                    uploadStatusMessage.textContent = 'Error: Cannot determine upload URL (page not saved yet?).';
+                    uploadStatusMessage.style.color = 'red';
+                }
+                return;
+            }
+
+            fetch(uploadUrl, { 
+                method: 'POST', 
+                body: formData, 
+                headers: { 'X-CSRFToken': csrfToken } // Common way to send CSRF for Django AJAX
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    if (uploadStatusMessage) {
+                        uploadStatusMessage.textContent = data.message;
+                        uploadStatusMessage.style.color = 'green';
+                    }
+                    fileUploadForm.reset(); 
+                    if(filenameSlugInput) {
+                        filenameSlugInput.value = ''; // Clear slug field
+                        filenameSlugInput.dataset.autoGenerated = 'true'; // Reset for next auto-gen
+                    }
+                    if(filenameSlugHelpText) filenameSlugHelpText.textContent = "{% if upload_form.filename_slug.help_text %}{{ upload_form.filename_slug.help_text|safe|escapejs }}{% else %}Auto-generated from filename if left blank.{% endif %}";
+
+                    const newFile = data.file;
+                    const li = document.createElement('li');
+                    li.classList.add('file-item');
+                    li.id = `file-item-${newFile.id}`;
+                    li.dataset.filenameSlug = newFile.filename_slug_stored; // Use the slug confirmed by backend
+                    li.innerHTML = `
+                        <a href="${newFile.url}" target="_blank" class="file-link">${newFile.name}</a>
+                        <small class="file-meta">
+                            Uploaded on ${newFile.uploaded_at_display}
+                            ${newFile.uploaded_by_username ? `by ${newFile.uploaded_by_username}` : ''}
+                        </small>
+                        <button type="button" class="button-danger-small file-delete-btn" 
+                                data-file-id="${newFile.id}" 
+                                data-delete-url="${newFile.delete_url}">
+                            Delete
+                        </button>
+                    `;
+                    if (fileListContainer) fileListContainer.appendChild(li);
+                    if (noFilesMessage) noFilesMessage.style.display = 'none';
+                    // Add event listener to the new delete button
+                    li.querySelector('.file-delete-btn').addEventListener('click', handleDeleteFileEvent);
+                } else { 
+                    if (uploadStatusMessage) {
+                        uploadStatusMessage.textContent = data.message || 'Upload failed.';
+                        uploadStatusMessage.style.color = 'red';
+                    }
+                    if (data.errors) {
+                        for (const field in data.errors) {
+                            const errorEl = document.getElementById(`fileUploadError_${field}`);
+                            if (errorEl) {
+                                errorEl.textContent = data.errors[field].join(', ');
+                                errorEl.style.display = 'block';
+                            }
+                        }
+                    }
+                }
+            })
+            .catch(error => { 
+                console.error("Upload fetch error:", error);
+                if (uploadStatusMessage) {
+                    uploadStatusMessage.textContent = 'Network error during upload.';
+                    uploadStatusMessage.style.color = 'red';
+                }
+            })
+            .finally(() => { 
+                if (uploadStatusMessage) {
+                    setTimeout(() => { if(uploadStatusMessage) uploadStatusMessage.textContent = ''; }, 5000); 
+                }
+            });
+        });
+    }
+
+    function handleDeleteFileEvent(event) {
+        const button = event.target;
+        const fileId = button.dataset.fileId;
+        const deleteUrl = button.dataset.deleteUrl;
+        if (!confirm('Are you sure you want to delete this file? This action cannot be undone.')) return;
+        
+        if (deleteAttachmentStatusMessage) {
+            deleteAttachmentStatusMessage.textContent = 'Deleting...';
+            deleteAttachmentStatusMessage.style.color = 'inherit';
+        }
+
+        const csrfToken = getCsrfTokenFromMainForm(); 
+        if (!csrfToken) { 
+            if (deleteAttachmentStatusMessage) {
+                deleteAttachmentStatusMessage.textContent = 'Error: CSRF token not found.';
+                deleteAttachmentStatusMessage.style.color = 'red';
+            }
+            return; 
+        }
+        fetch(deleteUrl, { 
+            method: 'POST', // Django often expects POST for delete actions with CSRF
+            headers: { 
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json' // If sending JSON body, else not needed for simple POST
+            }
+            // body: JSON.stringify({}) // If backend expects a JSON body for POST
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const listItem = document.getElementById(`file-item-${fileId}`);
+                if (listItem) listItem.remove();
+                if (fileListContainer && fileListContainer.children.length === 0 && noFilesMessage) {
+                    noFilesMessage.style.display = 'block';
+                }
+                if (deleteAttachmentStatusMessage) {
+                    deleteAttachmentStatusMessage.textContent = data.message; 
+                    deleteAttachmentStatusMessage.style.color = 'green';
+                }
+            } else {
+                if (deleteAttachmentStatusMessage) {
+                    deleteAttachmentStatusMessage.textContent = data.message || 'Failed to delete file.'; 
+                    deleteAttachmentStatusMessage.style.color = 'red';
+                }
+            }
+        })
+        .catch(error => { 
+            console.error("Delete file fetch error:", error);
+            if (deleteAttachmentStatusMessage) {
+                deleteAttachmentStatusMessage.textContent = 'A network error occurred during deletion.'; 
+                deleteAttachmentStatusMessage.style.color = 'red'; 
+            }
+        })
+        .finally(() => {
+            if (deleteAttachmentStatusMessage) {
+                setTimeout(() => { if(deleteAttachmentStatusMessage) deleteAttachmentStatusMessage.textContent = ''; }, 3000);
+            }
+        });
+    }
+    
+    // Add event listeners to existing delete buttons
+    if (fileListContainer) {
+        fileListContainer.querySelectorAll('.file-delete-btn').forEach(button => {
+            button.addEventListener('click', handleDeleteFileEvent);
+        });
+    }
+});
+</script>
+{% endblock %}

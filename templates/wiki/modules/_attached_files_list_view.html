@@ -1,0 +1,28 @@
+{% comment %} templates/wiki/modules/_attached_files_list_view.html {% endcomment %}
+{% comment %}
+    Expects:
+    - page_files: queryset of file_attachment objects
+    - user: the request.user object
+    - page: the parent page object (for URLs)
+{% endcomment %}
+{% if page_files %}
+<hr style="margin: 3rem 0 2rem 0;">
+
+<div class="wiki-attachments section-card-plain">
+    <h2>Attached Files</h2>
+    <ul class="file-list">
+        {% for file_attachment in page_files %}
+            <li class="file-item">
+                <a href="{{ file_attachment.file.url }}" target="_blank" class="file-link">{{ file_attachment.filename_display }}</a>
+                <small class="file-meta">
+                    - Uploaded: {{ file_attachment.uploaded_at|date:"M d, Y" }}
+                    {% if file_attachment.uploaded_by %}
+                        by {{ file_attachment.uploaded_by.username }}
+                    {% endif %}
+                </small>
+                <a href="{% url 'wiki:page_download_file' page.slug file_attachment.id %}" class="link button-danger-small file-download-btn" download>Download</a>
+            </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}

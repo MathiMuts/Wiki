@@ -186,7 +186,7 @@ def search(request):
             return redirect(exact_match.get_absolute_url())
         
     if query and results.exists():
-        return render(request, 'wiki/modules/wiki_list.html', {'pages': results , 'is_search': True})
+        return render(request, 'wiki/pages/wiki_list.html', {'pages': results , 'is_search': True})
     else:
         messages.warning(request, f"No results found for '{query}'.")
         return redirect('wiki:wiki')
@@ -207,7 +207,7 @@ def wiki(request):
             
         except Exception as e_create:
             pages = WikiPage.objects.all().order_by('-updated_at')
-            return render(request, 'wiki/modules/wiki_list.html', {
+            return render(request, 'wiki/pages/wiki_list.html', {
                 'pages': pages,
                 'list_title': "Wiki Error",
             })
@@ -216,7 +216,7 @@ def wiki(request):
         landing_page = WikiPage.objects.filter(slug=ROOT_WIKI_PAGE_SLUG).order_by('created_at').first()
         if not landing_page:
             pages = WikiPage.objects.all().order_by('-updated_at')
-            return render(request, 'wiki/modules/wiki_list.html', {
+            return render(request, 'wiki/pages/wiki_list.html', {
                 'pages': pages,
                 'list_title': "Wiki Error",
             })
@@ -225,14 +225,14 @@ def wiki(request):
         return redirect(landing_page.get_absolute_url())
     else:
         pages = WikiPage.objects.all().order_by('-updated_at')
-        return render(request, 'wiki/modules/wiki_list.html', {
+        return render(request, 'wiki/pages/wiki_list.html', {
             'pages': pages,
             'list_title': "Wiki Error",
         })
     
 def all_wiki_pages(request):
     pages = WikiPage.objects.all().order_by('-updated_at')
-    return render(request, 'wiki/modules/wiki_list.html', {'pages': pages, 'list_title': "All Wiki Pages"})
+    return render(request, 'wiki/pages/wiki_list.html', {'pages': pages, 'list_title': "All Wiki Pages"})
 
 def wiki_page(request, slug):
     try:
@@ -243,7 +243,7 @@ def wiki_page(request, slug):
         qr = utils.qr_img(request)
         page_files = page.files.all().order_by('-uploaded_at')
 
-        return render(request, 'wiki/modules/wiki_page.html', {
+        return render(request, 'wiki/pages/wiki_page.html', {
             'page': page,
             'html_content': html_content,
             'qrcode': qr,
@@ -315,7 +315,7 @@ def page_create(request):
             if not page_exists_now:
                  messages.info(request, f"The page '{page_display_name_for_msg}' does not exist. You can create it now.")
 
-    return render(request, 'wiki/modules/wiki_form.html', {'form': form, 'action': 'Create', 'page_files': None, 'upload_form': None})
+    return render(request, 'wiki/pages/wiki_form.html', {'form': form, 'action': 'Create', 'page_files': None, 'upload_form': None})
 
 @login_required
 def page_edit(request, slug):
@@ -335,7 +335,7 @@ def page_edit(request, slug):
     else: 
         form = WikiPageForm(instance=page)
         
-    return render(request, 'wiki/modules/wiki_form.html', {
+    return render(request, 'wiki/pages/wiki_form.html', {
         'form': form, 
         'page': page, 
         'action': 'Edit',
@@ -352,7 +352,7 @@ def page_delete(request, slug):
         page.delete()
         messages.success(request, f"Page '{page_title}' deleted successfully.")
         return redirect('wiki:wiki')
-    return render(request, 'wiki/modules/page_confirm_delete.html', {'page': page})
+    return render(request, 'wiki/pages/page_confirm_delete.html', {'page': page})
 
 @login_required
 def page_upload_file(request, slug):
@@ -455,7 +455,7 @@ def exam_create(request, parent_slug):
         }
         form = ExamPageForm(initial=initial_data, parent_page=parent_page)
     
-    return render(request, 'wiki/modules/exam_form.html', {
+    return render(request, 'wiki/pages/exam_form.html', {
         'form': form, 
         'parent_page': parent_page,
         'action': 'Create',
@@ -489,7 +489,7 @@ def exam_edit(request, parent_slug, exam_slug):
     else:
         form = ExamPageForm(instance=exam, parent_page=parent_page)
         
-    return render(request, 'wiki/modules/exam_form.html', {
+    return render(request, 'wiki/pages/exam_form.html', {
         'form': form, 
         'exam': exam,
         'parent_page': parent_page,
@@ -505,7 +505,7 @@ def exam_delete(request, parent_slug, exam_slug):
         exam.delete()
         messages.success(request, f"Exam '{exam_title}' deleted successfully.")
         return redirect(parent_page.get_absolute_url())
-    return render(request, 'wiki/modules/exam_confirm_delete.html', {'exam': exam, 'parent_page': parent_page})
+    return render(request, 'wiki/pages/exam_confirm_delete.html', {'exam': exam, 'parent_page': parent_page})
 
 def exam_download(request, parent_slug, exam_slug):
     exam = get_object_or_404(ExamPage, parent_page__slug=parent_slug, slug=exam_slug)

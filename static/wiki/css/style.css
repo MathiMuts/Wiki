@@ -6,7 +6,7 @@
 }
 
 :root {
-  /* White theme */
+  /* INFO: White theme */
   --background-color: #ffffff;
   --card-color: #ffffff;
 
@@ -14,15 +14,7 @@
   --secondary-text-color: #454547;
   --tertiary-text-color: #fafafc;
 
-  /* Dark theme */
-  /* --background-color: #000000;
-  --card-color: #000000;
-
-  --primary-text-color: #fafafc;
-  --secondary-text-color: #454547;
-  --tertiary-text-color: #000; */
-
-  /* Classic Yellow*/
+  /* INFO: Classic Yellow*/
   /* --background-color: #f3f3e8;
   --card-color: rgb(248, 248, 240);
 

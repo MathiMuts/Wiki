@@ -1,0 +1,48 @@
+{% extends "../modules/_base.html" %}
+{% comment %} templates/wiki/pages/wiki_page.html {% endcomment %}
+
+{% block title%}{{ page.title }} - Wiki{% endblock %}
+{% load static %}
+{% block content %}
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;">
+        <div>
+            <h1>{{ page.title }}</h1>
+            <div class="page-meta">
+                Created: {{ page.created_at|date:"F d, Y, P" }} <br>
+                Last updated: {{ page.updated_at|date:"F d, Y, P" }}
+                {% if page.last_modified_by %}
+                    by <strong>{{ page.last_modified_by.username }}</strong>
+                {% else %}
+                    (modifier unknown)
+                {% endif %}
+            </div>
+
+            <div class="actions">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'wiki:page_edit' page.slug %}" class="button-styled button-edit">Edit This Page</a>
+                    <a href="{% url 'wiki:exam_create' parent_slug=page.slug %}" class="button-styled button-create">Create New Exam</a>
+                    <a href="{% url 'wiki:page_create' %}" class="button-styled button-warn">Create New Page</a>
+                {% else %}
+                    <a href="{% url 'login' %}?next={{request.path}}" class="button-styled button-warn">Login to edit</a>
+                {% endif %} 
+            </div>
+        </div>
+
+        {% if qrcode %}
+        <div class="desktop-only" style="margin-right: 20px; flex-shrink: 0;">
+            <img src="data:image/png;base64,{{ qrcode }}" alt="QR code for {{ page.title }}" style="max-height: 150px; max-width: 150px; padding: 5px;" />
+        </div>
+        {% endif %}
+    </div>
+
+    <hr style="margin: 20px 0;">
+
+    <div class="markdown-content">
+        {{ html_content|safe }}
+    </div>
+
+    {% include "../modules/_exam_subpages_list.html" with exam_subpages=exam_subpages user=user page=page display_mode="view" parent_page_slug=page.slug %}
+
+    {% include "../modules/_attached_files_list_view.html" with page_files=page_files user=user page=page %}
+
+{% endblock %}

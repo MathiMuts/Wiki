@@ -1,0 +1,49 @@
+{% comment %} templates/wiki/modules/_exam_subpages_list.html {% endcomment %}
+{% comment %}
+    Expects:
+    - exam_subpages: queryset of exam objects
+    - user: the request.user object
+    - page: the parent page object (for URLs if needed, e.g., parent_slug for exam_create)
+    - display_mode: "view" (for wiki_page.html) or "edit" (for wiki_form.html)
+    - parent_page_slug: slug of the parent page (can be page.slug)
+{% endcomment %}
+
+{% if exam_subpages %}
+<hr style="margin: 3rem 0 2rem 0;">
+
+<div class="wiki-subpages section-card-plain">
+    <h2>Exams</h2>
+    <ul class="file-list">
+        {% for exam in exam_subpages %}
+            <li class="file-item">
+                {% if exam.pdf_file %}
+                    <a href="{{ exam.get_url }}" target="_blank" class="file-link">{{ exam.title }}</a>
+                {% else %}
+                    <div style="font-weight: 500; color: var(--secondary-text-color);">{{ exam.title }}</div>
+                {% endif %}
+                <small class="file-meta"> ({{ exam.slug }})
+                    - Last updated: {{ exam.updated_at|date:"M d, Y" }}
+                    {% if exam.last_modified_by %}by {{ exam.last_modified_by.username }}{% endif %}
+                </small>
+                
+                {% if user.is_authenticated %}
+                    <a href="{{ exam.get_absolute_url }}" class="link button-danger-small subpage-edit-btn edit">Edit Exam</a>
+                    {% if display_mode == "edit" %}
+                         <a href="{{ exam.get_absolute_url }}?action=delete_setup" class="link button-danger-small subpage-delete-btn warn">Delete Exam</a>
+                    {% endif %}
+                {% endif %}
+                
+                {% if display_mode == "view" %}
+                    {% if exam.get_download_url %}
+                        <a href="{{ exam.get_download_url }}" class="link button-danger-small subpage-download-btn">Download PDF</a>
+                    {% else %}
+                        <span class="button-disabled-small">PDF Not Ready</span>
+                    {% endif %}
+                {% endif %}
+            </li>
+        {% empty %}
+            <li>No exams created yet for this page.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}

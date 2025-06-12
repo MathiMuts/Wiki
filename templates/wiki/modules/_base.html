@@ -1,0 +1,17 @@
+{% comment %} templates/wiki/modules/_base.html {% endcomment %}
+{% load static %}
+<link rel="stylesheet", href="{% static 'wiki/css/style.css'%}">
+<link rel="stylesheet", href="{% static 'wiki/css/wiki.css'%}">
+
+<div id="page">
+    {% include "./_menu.html" %}
+
+    <div id="wiki-content">
+        {% include "./_messages.html" %}
+
+        {% block content %}
+        {% endblock %}
+    </div>
+</div>
+<script src="{% static 'wiki/js/wiki_utils.js' %}" defer></script>
+<script src="{% static 'wiki/js/wiki_editor_enhancements.js' %}" defer></script>
