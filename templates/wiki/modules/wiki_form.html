@@ -89,7 +89,9 @@
                     
                     {% if user.is_authenticated %}
                     <a href="{{ exam.get_absolute_url }}" class="link button-danger-small subpage-edit-btn warn">Edit Exam</a>
+                    <a href="{{ exam.get_absolute_url }}" class="link button-danger-small subpage-delete-btn warn">Delete Exam</a>
                     {% endif %}
+
                     
                     {% comment %} INFO: This block allows pdf downloads in edit page mode. This disabled to discurage entering edit mode for anything else than editing. {% endcomment %}
                     {% comment %} {% if exam.get_download_url %}

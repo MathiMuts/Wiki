@@ -62,6 +62,9 @@ class WikiFileForm(forms.ModelForm):
         }
 
 class ExamPageForm(forms.ModelForm):
+
+    PAGE_TYPE_PLACEHOLDER = ('', '--------- Select Type ---------')
+
     class Meta:
         model = ExamPage
         fields = ['title', 'slug', 'page_type', 'content']
@@ -84,7 +87,8 @@ class ExamPageForm(forms.ModelForm):
                 'id': 'wiki-form-content-textarea',
                 'rows': 15,
                 'class': 'form-control markdown-editor-area input',
-                'placeholder': 'Enter content here. PDF will be generated based on selected type.'
+                'placeholder': 'Select a content type above to enable editing.',
+                'disabled': True,
             }),
         }
         help_texts = {
@@ -94,8 +98,37 @@ class ExamPageForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.parent_page = kwargs.pop('parent_page', None)
+        initial = kwargs.get('initial', {})
+        instance = kwargs.get('instance', None)
+
         super().__init__(*args, **kwargs)
 
+        model_choices = list(self.fields['page_type'].widget.choices)
+
+        if model_choices and model_choices[0][0] == '':
+            actual_model_choices = model_choices[1:]
+        else:
+            actual_model_choices = model_choices
+        
+        self.fields['page_type'].widget.choices = [self.PAGE_TYPE_PLACEHOLDER] + actual_model_choices
+        
+        if not instance and 'page_type' not in initial:
+            self.initial['page_type'] = self.PAGE_TYPE_PLACEHOLDER[0]
+        elif instance and instance.pk and instance.page_type:
+            self.fields['content'].widget.attrs.pop('disabled', None)
+            self.fields['content'].widget.attrs['placeholder'] = 'Enter content here. PDF will be generated based on selected type.'
+        
+        current_initial_page_type = self.initial.get('page_type')
+        valid_choice_values = [choice[0] for choice in self.fields['page_type'].widget.choices]
+        if current_initial_page_type not in valid_choice_values:
+            self.initial['page_type'] = self.PAGE_TYPE_PLACEHOLDER[0]
+
+
+    def clean_page_type(self):
+        page_type = self.cleaned_data.get('page_type')
+        if not page_type:
+            raise forms.ValidationError("Please select a content type.")
+        return page_type
 
     def clean_slug(self):
         slug = self.cleaned_data.get('slug')
@@ -115,7 +148,4 @@ class ExamPageForm(forms.ModelForm):
                 queryset = queryset.exclude(pk=self.instance.pk)
             if queryset.exists():
                 raise forms.ValidationError("An exam/sub-page with this slug already exists for this wiki page.")
-        elif not self.instance.pk:
-            raise forms.ValidationError("Parent page context is missing for slug validation.")
-            
         return slug

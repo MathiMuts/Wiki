@@ -39,7 +39,7 @@
 .actions a.create { background-color: #5cb85c; }
 .actions a.login, .actions a.warn { background-color: #f0ad4e; }
 .actions a.edit, .subpage-edit-btn { background-color: #007bff; color: white; }
-.actions button.delete, .file-delete-btn { background-color: #d9534f; color: white;}
+.actions button.delete, .file-delete-btn, .subpage-delete-btn { background-color: #d9534f; color: white;}
 .actions .button-link.cancel, .file-download-btn, .subpage-download-btn { background-color: #6c757d; color: white; }
 .actions a:hover, .actions button:hover, .button-danger-small:hover { opacity: 0.9; }
 .actions .button-link.cancel { margin-left: 10px; text-decoration: none; padding: 10px 15px; border-radius: 8px; font-size: 0.9em;border: none; }
