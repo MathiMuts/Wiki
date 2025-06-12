@@ -3,161 +3,19 @@ import os
 import mimetypes
 import markdown2
 from . import utils
+from . import constants
 from urllib.parse import urlencode
 from .models import WikiPage, WikiFile, ExamPage
 from .forms import WikiPageForm, WikiFileForm, ExamPageForm
 
 from django.urls import reverse
-from django.http import Http404, HttpResponse, JsonResponse, FileResponse 
+from django.http import Http404, HttpResponse, JsonResponse, FileResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils.text import slugify
-
-
-
-ROOT_WIKI_PAGE_SLUG = "home"
-MENU_CONFIG_PAGE_SLUG = "menu-config"
-
-DEFAULT_ROOT_PAGE_CONTENT = '''
-# Welcome to the Wiki!
-
-This is the explaination page of the new wiki. Below is a demonstration of the formatting features available.
-
----
-## Standard Markdown Features
-
-This wiki uses Markdown for formatting content. Here are some common examples:
-
-### Text Formatting
-- *Italic text*: `*Italic text*` or `_italic text_`
-- **Bold text**: `**Bold text**` or `__bold text__`
-- `Codeblocks`: `` `Inline code span` `` or ```` ``` `Backticks` ``` ```` for literal backticks inside.
-
-# Heading 1 (equivalent to page title, usually only one per page)
-`# Heading 1`
-## Heading 2 (like this section's title)
-`## Heading 2`
-### Heading 3
-`### Heading 3`
-#### Heading 4
-`#### Heading 4`
-##### Heading 5
-`##### Heading 5`
-###### Heading 6
-`###### Heading 6`
-
-#### Unordered List
-- Item 1
-- Item 2
-    - Sub-item 2.1
-    - Sub-item 2.2
-- Item 3
-
-```
-#### Unordered List
-- Item 1
-- Item 2
-    - Sub-item 2.1
-    - Sub-item 2.2
-- Item 3
-```
-
-#### Ordered List
-1. First item
-2. Second item
-    1. Sub-item 2.a
-    2. Sub-item 2.b
-3. Third item
-
-```
-#### Ordered List
-1. First item
-2. Second item
-    1. Sub-item 2.a
-    2. Sub-item 2.b
-3. Third item
-```
-
-### Links
-- [This is an external link to the Markdown docs.](https://www.markdownguide.org/) `[This is an external link to the Markdown docs.](https://www.markdownguide.org/)`
-- [[ Use double square brackets to link to other pages within this wiki.| Menu Config ]] `[[ Menu Config ]]` or `[[ Display Text | Menu Config ]]`
-- [Use links to attached files to link them in the text.](test.pdf) `[Display Text.](test.pdf)`
-
-### Images
-![Alt text for an image](https://picsum.photos/200/300)
-![Alt text for an image](test)
-
-```
-![Alt text for an image](https://picsum.photos/200/300)
-![This image is attatched below](test)
-```
-
-### Blockquotes
-> This is a blockquote.
-> It can span multiple lines.
->
-> > Nested blockquotes are also possible.
-```
-> This is a blockquote.
-> It can span multiple lines.
->
-> > Nested blockquotes are also possible.
-```
-
-### Code Blocks
-For a block of code, use triple backticks (fenced code blocks):
-
-```
-This is a generic code block
-without language specification.
-Plain text.
-```
-
-````
-```
-This is a generic code block
-without language specification.
-Plain text.
-```
-````
-
-### Horizontal Rule
-
-***
-
----
-
-___
-
-```
----
-___
-***
-```
-
-### Tables
-| Header 1      | Header 2      | Header 3      |
-|---------------|---------------|---------------|
-| Cell 1.1      | Cell 1.2      | Cell 1.3      |
-| Cell 2.1      | **Cell 2.2** (can have Markdown) | Cell 2.3      |
-| `Cell 3.1`    | Cell 3.2      | _Cell 3.3_    |
-
-```
-| Header 1      | Header 2      | Header 3      |
-|---------------|---------------|---------------|
-| Cell 1.1      | Cell 1.2      | Cell 1.3      |
-| Cell 2.1      | **Cell 2.2** (can have Markdown) | Cell 2.3      |
-| `Cell 3.1`    | Cell 3.2      | _Cell 3.3_    |
-```
-
-Happy Wiki-ing!
-
-
-
-'''
 
 
 def search(request):
@@ -170,11 +28,11 @@ def search(request):
             exact_match = WikiPage.objects.get(title__iexact=query)
         except WikiPage.DoesNotExist:
             exact_match = None
-        except WikiPage.MultipleObjectsReturned: 
-            exact_match = None 
+        except WikiPage.MultipleObjectsReturned:
+            exact_match = None
         if not exact_match:
             results = WikiPage.objects.filter(
-                Q(title__icontains=query) | 
+                Q(title__icontains=query) |
                 Q(content__icontains=query)
             ).distinct().order_by('-updated_at')
 
@@ -184,7 +42,7 @@ def search(request):
 
         if exact_match:
             return redirect(exact_match.get_absolute_url())
-        
+
     if query and results.exists():
         return render(request, 'wiki/pages/wiki_list.html', {'pages': results , 'is_search': True})
     else:
@@ -193,27 +51,27 @@ def search(request):
 
 def wiki(request):
     landing_page = None
-    page_title = ROOT_WIKI_PAGE_SLUG.replace('-', ' ').title()
+    page_title = constants.ROOT_WIKI_PAGE_SLUG.replace('-', ' ').title()
 
     try:
-        landing_page = WikiPage.objects.get(slug=ROOT_WIKI_PAGE_SLUG)
+        landing_page = WikiPage.objects.get(slug=constants.ROOT_WIKI_PAGE_SLUG)
     except WikiPage.DoesNotExist:
         try:
             landing_page = WikiPage.objects.create(
                 title=page_title,
-                slug=ROOT_WIKI_PAGE_SLUG,
-                content=DEFAULT_ROOT_PAGE_CONTENT
+                slug=constants.ROOT_WIKI_PAGE_SLUG,
+                content=constants.DEFAULT_ROOT_PAGE_CONTENT
             )
-            
+
         except Exception as e_create:
             pages = WikiPage.objects.all().order_by('-updated_at')
             return render(request, 'wiki/pages/wiki_list.html', {
                 'pages': pages,
                 'list_title': "Wiki Error",
             })
-        
+
     except WikiPage.MultipleObjectsReturned:
-        landing_page = WikiPage.objects.filter(slug=ROOT_WIKI_PAGE_SLUG).order_by('created_at').first()
+        landing_page = WikiPage.objects.filter(slug=constants.ROOT_WIKI_PAGE_SLUG).order_by('created_at').first()
         if not landing_page:
             pages = WikiPage.objects.all().order_by('-updated_at')
             return render(request, 'wiki/pages/wiki_list.html', {
@@ -229,7 +87,7 @@ def wiki(request):
             'pages': pages,
             'list_title': "Wiki Error",
         })
-    
+
 def all_wiki_pages(request):
     pages = WikiPage.objects.all().order_by('-updated_at')
     return render(request, 'wiki/pages/wiki_list.html', {'pages': pages, 'list_title': "All Wiki Pages"})
@@ -250,7 +108,7 @@ def wiki_page(request, slug):
             'page_files': page_files,
             'exam_subpages': exam_subpages,
         })
-    
+
     except WikiPage.DoesNotExist:
         # Page does not exist, redirect to the create page view
         create_url = reverse('wiki:page_create')
@@ -287,10 +145,10 @@ def page_create(request):
             if raw_initial_title == slugify(raw_initial_title) and '-' in raw_initial_title:
                 final_title = raw_initial_title.replace('-', ' ').title()
             else:
-                final_title = raw_initial_title 
+                final_title = raw_initial_title
         elif raw_initial_slug:
             final_title = raw_initial_slug.replace('-', ' ').title()
-        
+
         if raw_initial_slug:
             final_slug = raw_initial_slug
 
@@ -298,12 +156,12 @@ def page_create(request):
             initial_data['title'] = final_title
         if final_slug:
             initial_data['slug'] = final_slug
-        
+
         form = WikiPageForm(initial=initial_data)
-        
+
         if raw_initial_title or raw_initial_slug:
             page_display_name_for_msg = initial_data.get('title', 'this page')
-            
+
             page_exists_now = False
             intended_slug_for_check = initial_data.get('slug')
             if not intended_slug_for_check and initial_data.get('title'):
@@ -311,7 +169,7 @@ def page_create(request):
 
             if intended_slug_for_check and WikiPage.objects.filter(slug=intended_slug_for_check).exists():
                 page_exists_now = True
-            
+
             if not page_exists_now:
                  messages.info(request, f"The page '{page_display_name_for_msg}' does not exist. You can create it now.")
 
@@ -321,10 +179,10 @@ def page_create(request):
 def page_edit(request, slug):
     page = get_object_or_404(WikiPage, slug=slug)
     page_files = page.files.all().order_by('-uploaded_at')
-    upload_form = WikiFileForm() 
+    upload_form = WikiFileForm()
     exam_subpages = page.exam_subpages.all().order_by('created_at')
 
-    if request.method == 'POST': 
+    if request.method == 'POST':
         form = WikiPageForm(request.POST, instance=page)
         if form.is_valid():
             edited_page = form.save(commit=False)
@@ -332,15 +190,15 @@ def page_edit(request, slug):
             edited_page.save()
             messages.success(request, f"Page '{edited_page.title}' updated successfully.")
             return redirect(edited_page.get_absolute_url())
-    else: 
+    else:
         form = WikiPageForm(instance=page)
-        
+
     return render(request, 'wiki/pages/wiki_form.html', {
-        'form': form, 
-        'page': page, 
+        'form': form,
+        'page': page,
         'action': 'Edit',
         'page_files': page_files,
-        'upload_form': upload_form, 
+        'upload_form': upload_form,
         'exam_subpages': exam_subpages,
     })
 
@@ -357,7 +215,7 @@ def page_delete(request, slug):
 @login_required
 def page_upload_file(request, slug):
     page = get_object_or_404(WikiPage, slug=slug)
-    
+
     if request.method == 'POST':
         if not request.user.is_authenticated:
             return JsonResponse({'status': 'error', 'message': 'Authentication required.'}, status=403)
@@ -367,13 +225,13 @@ def page_upload_file(request, slug):
             wiki_file = form.save(commit=False)
             wiki_file.page = page
             wiki_file.uploaded_by = request.user
-            
+
             wiki_file.save()
-            
+
             file_data = {
                 'id': wiki_file.id,
                 'url': wiki_file.file.url,
-                'name': wiki_file.filename_display, 
+                'name': wiki_file.filename_display,
                 'filename_slug_stored': wiki_file.filename_slug,
                 'uploaded_at_display': wiki_file.uploaded_at.strftime("%b %d, %Y %H:%M"),
                 'uploaded_by_username': wiki_file.uploaded_by.username if wiki_file.uploaded_by else "",
@@ -383,11 +241,11 @@ def page_upload_file(request, slug):
         else:
             errors = {field: [str(e) for e in error_list] for field, error_list in form.errors.items()}
             return JsonResponse({'status': 'error', 'message': 'Upload failed.', 'errors': errors}, status=400)
-    
+
     return JsonResponse({'status': 'error', 'message': 'Invalid request method. Only POST is allowed.'}, status=405)
 
 def page_download_file(request, slug, file_id):
-    page = get_object_or_404(WikiPage, slug=slug) # Optionally check if user has access to page
+    page = get_object_or_404(WikiPage, slug=slug)
     wiki_file = get_object_or_404(WikiFile, id=file_id, page=page)
 
     try:
@@ -417,17 +275,17 @@ def page_delete_file(request, slug, file_id):
     if request.method == 'POST':
         filename = file_to_delete.filename_display
         try:
-            file_to_delete.delete() 
+            file_to_delete.delete()
             return JsonResponse({'status': 'success', 'message': f"File '{filename}' deleted successfully."})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': 'Could not delete file.'}, status=500)
-    
+
     return JsonResponse({'status': 'error', 'message': 'Invalid request method. Only POST is allowed.'}, status=405)
 
 @login_required
 def exam_create(request, parent_slug):
     parent_page = get_object_or_404(WikiPage, slug=parent_slug)
-    
+
     if request.method == 'POST':
         form = ExamPageForm(request.POST, parent_page=parent_page)
         if form.is_valid():
@@ -435,7 +293,7 @@ def exam_create(request, parent_slug):
             exam.parent_page = parent_page
             exam.last_modified_by = request.user
             exam.save()
-            
+
             success, message = exam.compile_and_save_pdf(force_recompile=True)
             if success:
                 messages.success(request, f"Exam '{exam.title}' created. {message}")
@@ -454,9 +312,9 @@ def exam_create(request, parent_slug):
             'slug': default_slug,
         }
         form = ExamPageForm(initial=initial_data, parent_page=parent_page)
-    
+
     return render(request, 'wiki/pages/exam_form.html', {
-        'form': form, 
+        'form': form,
         'parent_page': parent_page,
         'action': 'Create',
         'exam': None,
@@ -473,11 +331,11 @@ def exam_edit(request, parent_slug, exam_slug):
         if form.is_valid():
             edited_exam = form.save(commit=False)
             edited_exam.last_modified_by = request.user
-            
+
             recompile_hint = False
             if 'content' in form.changed_data or 'page_type' in form.changed_data:
                 recompile_hint = True
-            
+
             edited_exam.save()
 
             success, message = edited_exam.compile_and_save_pdf(force_recompile=recompile_hint)
@@ -488,9 +346,9 @@ def exam_edit(request, parent_slug, exam_slug):
             return redirect(parent_page.get_absolute_url())
     else:
         form = ExamPageForm(instance=exam, parent_page=parent_page)
-        
+
     return render(request, 'wiki/pages/exam_form.html', {
-        'form': form, 
+        'form': form,
         'exam': exam,
         'parent_page': parent_page,
         'action': 'Edit'
@@ -527,7 +385,7 @@ def exam_download(request, parent_slug, exam_slug):
     except Exception as e:
         messages.error(request, f"Error serving PDF for '{exam.title}': {e}")
         return redirect(exam.parent_page.get_absolute_url())
-    
+
 def exam(request, parent_slug, exam_slug):
     exam = get_object_or_404(ExamPage, parent_page__slug=parent_slug, slug=exam_slug)
 

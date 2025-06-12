@@ -1,3 +1,4 @@
+# wiki/admin.py
 from django.contrib import admin
 from .models import WikiPage, WikiFile
 from django.urls import reverse

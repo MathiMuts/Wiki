@@ -1,5 +1,5 @@
+# wiki/models.py
 import os
-import re
 import shutil
 from django.db import models
 from django.urls import reverse
@@ -11,7 +11,9 @@ from io import BytesIO
 import subprocess
 import tempfile
 import markdown2
-# from . import utils # We will import utils locally in the method to avoid circular imports
+from . import constants
+# from . import utils # We will import utils locally in methods if needed
+
 
 class WikiPage(models.Model):
     title = models.CharField(max_length=200, unique=True)
@@ -39,7 +41,7 @@ class WikiPage(models.Model):
         queryset = WikiPage.objects.filter(slug=self.slug)
         if self.pk:
             queryset = queryset.exclude(pk=self.pk)
-            
+
         while queryset.exists():
             self.slug = f"{original_slug}-{counter}"
             counter += 1
@@ -52,21 +54,20 @@ class WikiPage(models.Model):
     def delete(self, *args, **kwargs):
         page_media_dir = self.get_media_directory_path()
 
-        super().delete(*args, **kwargs) 
+        super().delete(*args, **kwargs)
 
         if page_media_dir and os.path.exists(page_media_dir) and os.path.isdir(page_media_dir):
             try:
-                if not os.listdir(page_media_dir): 
+                if not os.listdir(page_media_dir):
                     os.rmdir(page_media_dir)
                 else:
-                    shutil.rmtree(page_media_dir) 
-                    
+                    shutil.rmtree(page_media_dir)
             except OSError as e:
                 pass
 
     def get_absolute_url(self):
         return reverse('wiki:wiki_page', kwargs={'slug': self.slug})
-    
+
     def get_media_directory_path(self):
         if not self.slug:
             return None
@@ -83,7 +84,7 @@ def wiki_page_file_path(instance, filename):
         final_filename_slug = slugify(temp_slug_base) if temp_slug_base and slugify(temp_slug_base) else 'uploaded-file'
 
     new_filename = f"{final_filename_slug}{original_ext}"
-    
+
     return f'wiki_files/{page_slug}/{new_filename}'
 
 class WikiFile(models.Model):
@@ -107,27 +108,27 @@ class WikiFile(models.Model):
         _name_on_disk, ext = os.path.splitext(os.path.basename(self.file.name))
         if self.filename_slug:
             return f"{self.filename_slug}{ext}"
-        return os.path.basename(self.file.name) 
+        return os.path.basename(self.file.name)
 
     def save(self, *args, **kwargs):
-        if self.file and not self.filename_slug: 
+        if self.file and not self.filename_slug:
             name_part, _ = os.path.splitext(os.path.basename(self.file.name))
             self.filename_slug = slugify(name_part) if name_part and slugify(name_part) else 'file'
-            
+
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         file_path_to_delete = None
         if self.file and hasattr(self.file, 'path') and self.file.path:
             file_path_to_delete = self.file.path
-        
-        super().delete(*args, **kwargs) 
+
+        super().delete(*args, **kwargs)
 
         if file_path_to_delete and os.path.isfile(file_path_to_delete):
             try:
                 os.remove(file_path_to_delete)
             except OSError:
-                pass 
+                pass
 
 def exam_page_pdf_path(instance, filename):
     parent_slug = instance.parent_page.slug if instance.parent_page else 'unknown_parent'
@@ -205,28 +206,20 @@ class ExamPage(models.Model):
         
         self.pdf_file.name = None
 
-        # --- LaTeX Dangerous Command Blacklist Definition ---
-        # WARNING: This blacklist is a supplementary security measure and NOT a foolproof solution.
-        # Proper sandboxing of the LaTeX compilation environment (e.g., Docker, chroot,
-        # restricted TeX live configuration) is CRITICAL to prevent arbitrary code execution.
-        DANGEROUS_LATEX_COMMANDS_RE = re.compile(
-            # Matches commands like \write18, \openin, \openout, \read, \ShellEscape, \immediate
-            r"\\(write18|openin|openout|read|ShellEscape|immediate)\b"
-        )
-
         pdf_content_bytes = None
         temp_dir_for_latex = None
 
         try:
             if self.page_type == 'latex':
-                match = DANGEROUS_LATEX_COMMANDS_RE.search(self.content)
+                match = constants.DANGEROUS_LATEX_COMMANDS_RE.search(self.content)
                 if match:
-                    dangerous_command_found = match.group(1) # Get the matched command name
+                    dangerous_command_found = match.group(1)
                     error_message = (
                         f"LaTeX compilation aborted: Potentially dangerous command "
                         f"'\\{dangerous_command_found}' detected in the content. "
                         f"Please remove or revise this command."
                     )
+                    if self.pk: super().save(update_fields=['pdf_file'])
                     return False, error_message
 
                 temp_dir_for_latex = tempfile.mkdtemp()
@@ -275,9 +268,9 @@ class ExamPage(models.Model):
             elif self.page_type == 'markdown':
                 try:
                     from weasyprint import HTML
-                    from . import utils as wiki_utils 
+                    from . import utils as local_wiki_utils
 
-                    processed_markdown_content = wiki_utils.preprocess_markdown_with_links(
+                    processed_markdown_content = local_wiki_utils.preprocess_markdown_with_links(
                         self.content,
                         current_page=self.parent_page
                     )
@@ -285,38 +278,8 @@ class ExamPage(models.Model):
                         processed_markdown_content,
                         extras=["fenced-code-blocks", "tables", "header-ids", "break-on-newline"]
                     )
-                    css_for_pdf = """
-                    @page { size: A4; margin: 2cm; }
-                    body { font-family: sans-serif; line-height: 1.5; font-size: 10pt; }
-                    h1, h2, h3, h4, h5, h6 { page-break-after: avoid; margin-top: 1.5em; margin-bottom: 0.5em; }
-                    h1 {font-size: 2em;} h2 {font-size: 1.75em;} h3 {font-size: 1.5em;}
-                    h4 {font-size: 1.25em;} h5 {font-size: 1.1em;} h6 {font-size: 1em;}
-                    p, ul, ol, blockquote { margin-bottom: 1em; }
-                    pre {
-                        font-family: monospace;
-                        background-color: #f0f0f0;
-                        padding: 1em;
-                        border-radius: 4px;
-                        overflow-x: auto;
-                        page-break-inside: avoid;
-                    }
-                    code {
-                        font-family: monospace;
-                        background-color: #f0f0f0;
-                        padding: 0.1em;
-                        border-radius: 1px;
-                        overflow-x: auto; /* Allow horizontal scroll for inline code if needed */
-                        page-break-inside: avoid;
-                    }
-                    table { border-collapse: collapse; width: 100%; margin-bottom: 1em; page-break-inside: avoid; }
-                    th, td { border: 1px solid #ccc; padding: 0.5em; text-align: left; }
-                    th { background-color: #f8f8f8; }
-                    img { max-width: 100%; height: auto; display: block; margin-bottom: 1em; }
-                    a { color: #007bff; text-decoration: none; }
-                    a:hover { text-decoration: underline; }
-                    blockquote { border-left: 3px solid #ccc; padding-left: 1em; margin-left: 0; color: #555; }
-                    hr { border: 0; border-top: 1px solid #ccc; margin: 2em 0; }
-                    """
+                    css_for_pdf = constants.DEFAULT_MARKDOWN_TO_PDF_CSS
+                    
                     pdf_buffer = BytesIO()
                     full_html = f"<html><head><meta charset='UTF-8'><style>{css_for_pdf}</style></head><body>{html_output}</body></html>"
                     HTML(string=full_html).write_pdf(pdf_buffer)
@@ -364,8 +327,15 @@ class ExamPage(models.Model):
             queryset = ExamPage.objects.filter(parent_page=self.parent_page, slug=self.slug)
             if self.pk:
                 queryset = queryset.exclude(pk=self.pk)
+        
+        update_fields_arg = kwargs.get('update_fields')
+        self._being_saved_fields = update_fields_arg if update_fields_arg is not None else []
+
 
         super().save(*args, **kwargs)
+
+        if hasattr(self, '_being_saved_fields'):
+            delattr(self, '_being_saved_fields')
 
 
     def delete(self, *args, **kwargs):
@@ -378,6 +348,12 @@ class ExamPage(models.Model):
         if pdf_path_to_delete and os.path.exists(pdf_path_to_delete):
             try:
                 os.remove(pdf_path_to_delete)
+                pdf_dir = os.path.dirname(pdf_path_to_delete)
+                if os.path.exists(pdf_dir) and not os.listdir(pdf_dir):
+                    os.rmdir(pdf_dir)
+                    parent_pdf_dir = os.path.dirname(pdf_dir)
+                    if os.path.exists(parent_pdf_dir) and not os.listdir(parent_pdf_dir):
+                        os.rmdir(parent_pdf_dir)
             except OSError:
                 pass
 

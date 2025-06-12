@@ -1,3 +1,4 @@
+# wiki/forms.py
 from django import forms
 from .models import WikiPage, WikiFile, ExamPage
 from django.utils.text import slugify

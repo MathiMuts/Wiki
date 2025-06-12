@@ -1,3 +1,4 @@
+# wiki/utils.py
 from django.urls import reverse, NoReverseMatch
 from .models import WikiPage, ExamPage
 from django.utils.text import slugify
@@ -9,6 +10,7 @@ import re
 import os
 from django.utils.html import escape
 from django.conf import settings
+from . import constants
 
 CODE_PATTERN_RE = re.compile(
     r"("
@@ -32,10 +34,6 @@ MARKDOWN_IMAGE_RE = re.compile(r"!\[(.*?)\]\((.*?)(?:\s+(['\"])(.*?)\3)?\)")
 def escape_markdown_chars(text):
     if not text:
         return ""
-    # Characters to escape: *, _, `, [, ], (, ), #, +, -, ., !
-    # Note: Escaping . and - might be too aggressive depending on context.
-    # Let's focus on the most common ones for emphasis, links, code.
-    # \ must be escaped first!
     chars_to_escape = r"([\\`*_{}\[\]()#+.!-])"
     return re.sub(chars_to_escape, r"\\\1", text)
 
@@ -44,10 +42,10 @@ def wikilink_replacer_factory(current_page=None):
         link_text_group = match.group(1)
         target_group = match.group(2).strip()
 
-        raw_link_text = target_group 
+        raw_link_text = target_group
         if link_text_group:
             raw_link_text = link_text_group.strip()
-        
+
         display_link_text = escape(escape_markdown_chars(raw_link_text))
 
         safe_target_for_url = slugify(target_group)
@@ -86,16 +84,10 @@ def standard_markdown_link_replacer_factory(current_page=None):
 
     if current_page:
         page_files_list = list(current_page.files.all())
-        exam_subpages_list = list(current_page.exam_subpages.all())
+        if hasattr(current_page, 'exam_subpages'):
+            exam_subpages_list = list(current_page.exam_subpages.all())
 
-    COMMON_FILE_EXTENSIONS = getattr(settings, 'WIKI_COMMON_FILE_EXTENSIONS', [
-        '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
-        '.txt', '.md', '.markdown', '.csv', '.rtf', '.odt', '.ods', '.odp',
-        '.zip', '.tar', '.gz', '.rar', '.7z',
-        '.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp',
-        '.html', '.htm', '.css', '.js', '.json', '.xml', '.py', '.java', '.c', '.cpp', '.h', '.php', '.rb', '.ipynb',
-        '.mp3', '.mp4', '.avi', '.mov', '.mkv', '.webm',
-    ])
+    COMMON_FILE_EXTENSIONS = getattr(settings, 'WIKI_COMMON_FILE_EXTENSIONS', constants.DEFAULT_COMMON_FILE_EXTENSIONS)
 
     def replacer(match):
         link_text_markdown = match.group(1)
@@ -141,14 +133,16 @@ def standard_markdown_link_replacer_factory(current_page=None):
             
             if resolved_exam and resolved_exam.pdf_file and resolved_exam.pdf_file.name:
                 try:
-                    exam_pdf_url = resolved_exam.pdf_file.url
+                    exam_pdf_url = resolved_exam.get_download_url() or resolved_exam.get_url()
+                    if not exam_pdf_url and resolved_exam.pdf_file:
+                        exam_pdf_url = resolved_exam.pdf_file.url
+
                     if exam_pdf_url:
                         return f'<a href="{exam_pdf_url}" class="filelink exam-pdflink" target="_blank" title="View exam PDF: {escape(resolved_exam.title)}">{display_link_text}</a>'
                 except Exception:
-                    pass 
+                    pass
 
-
-        if current_page: 
+        if current_page:
             attached_file = None
             link_target_stem, link_target_ext = os.path.splitext(target_path_or_url)
             link_target_ext = link_target_ext.lower()
@@ -163,12 +157,11 @@ def standard_markdown_link_replacer_factory(current_page=None):
                         attached_file = pf
                         break
                     
-                    pf_display_stem, pf_display_ext = os.path.splitext(pf.filename_display)
-                    if not pf_display_ext and pf_display_stem.lower() == target_path_or_url.lower():
+                    pf_display_stem, _ = os.path.splitext(pf.filename_display)
+                    if pf_display_stem.lower() == target_path_or_url.lower():
                         attached_file = pf
                         break
-                
-                else: 
+                else:
                     _, pf_actual_ext = os.path.splitext(pf.file.name)
                     pf_actual_ext = pf_actual_ext.lower()
                     
@@ -180,17 +173,18 @@ def standard_markdown_link_replacer_factory(current_page=None):
             if attached_file:
                 try:
                     return f'<a href="{attached_file.file.url}" class="filelink" target="_blank" title="View file: {escape(attached_file.filename_display)}">{display_link_text}</a>'
-                except Exception: 
+                except Exception:
                     return f'<span class="filelink-error" title="File URL error for {escaped_target_for_titles}">{display_link_text} (URL error)</span>'
-        
+
         looks_like_file = any(target_path_or_url.lower().endswith(ext) for ext in COMMON_FILE_EXTENSIONS)
 
         if looks_like_file:
             return f'<span class="filelink-missing" title="File or Exam PDF not found on this page: {escaped_target_for_titles}">{display_link_text} (file not found)</span>'
         else:
             try:
-                create_page_title_param = slugify(target_path_or_url)
-                create_url = reverse('wiki:page_create') + f'?title={create_page_title_param}'
+                create_slug_param = slugify(target_path_or_url)
+                create_title_param = target_path_or_url.replace('-', ' ').title()
+                create_url = reverse('wiki:page_create') + f'?initial_title_str={create_title_param}&initial_slug_str={create_slug_param}'
                 return f'<a href="{create_url}" class="wikilink-missing" title="Create page: {escaped_target_for_titles}">{display_link_text} (create)</a>'
             except NoReverseMatch:
                 return f'<span class="wikilink-error" title="Link target not found and create URL error: {escaped_target_for_titles}">{display_link_text} (link error)</span>'
@@ -215,21 +209,22 @@ def markdown_image_replacer_factory(current_page=None):
 
         attached_file = None
         
-        link_target_stem, link_target_ext = os.path.splitext(src_text)
-        link_target_ext = link_target_ext.lower()
+        src_stem, src_ext = os.path.splitext(src_text)
+        src_ext = src_ext.lower()
 
         for pf in page_files_list:
-            if pf.filename_display.lower() == src_text.lower(): # Match full src_text against display name
+            if pf.filename_display.lower() == src_text.lower():
                 attached_file = pf
                 break
-            if not link_target_ext: # If src_text has no extension
-                if pf.filename_slug.lower() == src_text.lower(): # Match src_text (as stem) against slug
+            
+            if not src_ext:
+                if pf.filename_slug.lower() == src_text.lower():
                     attached_file = pf
                     break
-            else: # If src_text has an extension
+            else:
                 _, pf_actual_ext = os.path.splitext(pf.file.name)
                 pf_actual_ext = pf_actual_ext.lower()
-                if pf.filename_slug.lower() == link_target_stem.lower() and pf_actual_ext == link_target_ext:
+                if pf.filename_slug.lower() == src_stem.lower() and pf_actual_ext == src_ext:
                     attached_file = pf
                     break
         
@@ -251,17 +246,13 @@ def preprocess_markdown_with_links(markdown_text, current_page=None):
 
     _wikilink_replacer = wikilink_replacer_factory(current_page)
     _markdown_image_replacer = markdown_image_replacer_factory(current_page)
-    # ORDER MATTERS: image replacer should come before standard markdown link replacer
     _standard_markdown_link_replacer = standard_markdown_link_replacer_factory(current_page)
 
     for match in CODE_PATTERN_RE.finditer(markdown_text):
         text_before_code = markdown_text[last_end:match.start()]
         
-        # Apply replacers in order of specificity or distinct patterns
         processed_text_before = WIKILINK_RE.sub(_wikilink_replacer, text_before_code)
-        # Images are distinct from general links due to "!"
         processed_text_before = MARKDOWN_IMAGE_RE.sub(_markdown_image_replacer, processed_text_before)
-        # Standard links are processed last as they are more general
         processed_text_before = STANDARD_MARKDOWN_LINK_RE.sub(_standard_markdown_link_replacer, processed_text_before)
         
         processed_parts.append(processed_text_before)
@@ -269,7 +260,6 @@ def preprocess_markdown_with_links(markdown_text, current_page=None):
         last_end = match.end()
 
     text_after_last_code = markdown_text[last_end:]
-
     processed_text_after = WIKILINK_RE.sub(_wikilink_replacer, text_after_last_code)
     processed_text_after = MARKDOWN_IMAGE_RE.sub(_markdown_image_replacer, processed_text_after)
     processed_text_after = STANDARD_MARKDOWN_LINK_RE.sub(_standard_markdown_link_replacer, processed_text_after)
@@ -278,7 +268,7 @@ def preprocess_markdown_with_links(markdown_text, current_page=None):
 
     return "".join(processed_parts)
 
-  
+
 def qr_img(request):
     current_url = request.build_absolute_uri()
     qr = qrcode.QRCode(box_size=5, border=0, error_correction=qrcode.constants.ERROR_CORRECT_M)
