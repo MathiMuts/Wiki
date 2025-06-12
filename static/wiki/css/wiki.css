@@ -241,5 +241,17 @@ input[type="file"]::-webkit-file-upload-button, input[type="file"]::file-selecto
     opacity: 0.85;
 }
 
-/*NOTE: TODO: FIXME: WARNING: INFO:*/
+.type-selector {
+    width: calc((100% - 20px)/2);
+    height: 48px;
+    box-sizing:border-box;
+    padding: 1rem 1.5rem;
+    border-radius: 16px;
+    background-color: inherit;
+    font-size: 1em;
+    color: inherit;
+    margin-bottom: 15px;
+    border: none;
+}
+
 

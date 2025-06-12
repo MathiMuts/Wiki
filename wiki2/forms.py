@@ -78,7 +78,7 @@ class ExamPageForm(forms.ModelForm):
             }),
             'page_type': forms.Select(attrs={
                 'id': 'exam-form-page-type-select',
-                'class': 'form-control input',
+                'class': 'form-control input type-selector',
             }),
             'content': forms.Textarea(attrs={
                 'id': 'exam-form-content-textarea',
