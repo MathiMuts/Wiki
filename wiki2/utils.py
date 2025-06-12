@@ -113,7 +113,7 @@ def standard_markdown_link_replacer_factory(current_page=None):
             
             if resolved_exam and resolved_exam.pdf_file and resolved_exam.pdf_file.name:
                 try:
-                    exam_pdf_url = resolved_exam.get_download_url() or resolved_exam.get_url()
+                    exam_pdf_url = resolved_exam.get_url()
                     if not exam_pdf_url and resolved_exam.pdf_file:
                         exam_pdf_url = resolved_exam.pdf_file.url
 

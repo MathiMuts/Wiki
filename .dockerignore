@@ -1,0 +1,37 @@
+# Git
+.git
+.gitignore
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.yml
+# entrypoint.sh is copied explicitly
+
+# Python / uv
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.env
+venv/
+.venv/  # Local virtual environment, not the one in the image
+env/
+ENV/
+.uv_cache/ # uv's cache directory
+
+# Local data / DB
+db.sqlite3
+# staticfiles/ # Managed by Docker volume / collectstatic
+# media/       # Managed by Docker volume
+
+# IDE / OS specific
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+
+# Files managed by Docker build stages
+# pyproject.toml # Copied in builder stage
+# uv.lock        # Copied in builder stage

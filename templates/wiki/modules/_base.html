@@ -1,7 +1,25 @@
 {% comment %} templates/wiki/modules/_base.html {% endcomment %}
 {% load static %}
-<link rel="stylesheet", href="{% static 'wiki/css/style.css'%}">
-<link rel="stylesheet", href="{% static 'wiki/css/wiki.css'%}">
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>{% block title %}{% endblock %}</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.75">
+    <meta charset="utf-8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <link rel="stylesheet", href="{% static 'wiki/css/style.css'%}">
+    <link rel="stylesheet", href="{% static 'wiki/css/wiki.css'%}">
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    <link rel="apple-touch-icon" href="{% static 'wiki/icons/logo512.png' %}">
+    <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
+  </head>
+
+
+
+
 
 <div id="page">
     {% include "./_menu.html" %}
@@ -13,5 +31,5 @@
         {% endblock %}
     </div>
 </div>
-<script src="{% static 'wiki/js/wiki_utils.js' %}" defer></script>
-<script src="{% static 'wiki/js/wiki_editor_enhancements.js' %}" defer></script>
+<script src="{% static 'wiki/JS/wiki_utils.js' %}" defer></script>
+<script src="{% static 'wiki/JS/wiki_editor_enhancements.js' %}" defer></script>

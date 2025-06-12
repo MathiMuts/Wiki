@@ -20,8 +20,8 @@
 #hamburger {
     position: fixed;
     top: calc(3rem + 70px);
-    height: 8rem;
-    width: 8rem;
+    height: 5rem;
+    width: 5rem;
     left: 3rem;
     z-index: 1000;
     background: var(--tertiary-background-color, #333);
@@ -148,11 +148,11 @@
 
     #menu h3 {
         margin-top: 2rem;
-        font-size: 50pt;
+        font-size: 30pt;
     }
 
     #menu button.button-transparent {
-        font-size: 25pt;
+        font-size: 16pt;
         text-align: center;
     }
 
@@ -164,8 +164,8 @@
     }
 
     #wikiMenuSearchInput {
-       font-size: 30pt;
-       height: 6rem;
+       font-size: 20pt;
+       height: 5rem;
     }
 
     #itembar {
