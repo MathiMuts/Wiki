@@ -322,6 +322,7 @@ def page_edit(request, slug):
     page = get_object_or_404(WikiPage, slug=slug)
     page_files = page.files.all().order_by('-uploaded_at')
     upload_form = WikiFileForm() 
+    exam_subpages = page.exam_subpages.all().order_by('created_at')
 
     if request.method == 'POST': 
         form = WikiPageForm(request.POST, instance=page)
@@ -340,6 +341,7 @@ def page_edit(request, slug):
         'action': 'Edit',
         'page_files': page_files,
         'upload_form': upload_form, 
+        'exam_subpages': exam_subpages,
     })
 
 @login_required

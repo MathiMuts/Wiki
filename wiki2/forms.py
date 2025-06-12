@@ -58,7 +58,7 @@ class WikiFileForm(forms.ModelForm):
             'filename_slug': 'Proposed Slug'
         }
         help_texts = {
-            'filename_slug': 'This name (without extension) will be used for display. It will be auto-generated. You can modify it once a file is selected if allowed by admin.'
+            'filename_slug': 'This name (without extension) will be used for display. It will be auto-generated. This is also the name used to refrence this file in the wiki.'
         }
 
 class ExamPageForm(forms.ModelForm):
