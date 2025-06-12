@@ -197,3 +197,24 @@ LOGGING = {
         },
     },
 }
+
+# INFO: FOR SSL/TLS (HTTPS) Configuration
+# If Nginx is handling SSL termination and forwarding as HTTP
+# This tells Django to trust the X-Forwarded-Proto header from your proxy for determining if a request is secure.
+# Only set this if you are sure your proxy is setting this header correctly and cannot be spoofed by clients.
+# USE_X_FORWARDED_HOST = True # To derive the Host header from X-Forwarded-Host
+# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# ALLOWED_HOSTS will need to include the domain names Nginx is serving,
+# e.g., 'localhost', 'yourdomain.com'
+# The values from your .env file should already cover this.
+
+# CSRF_TRUSTED_ORIGINS should also include the origins Nginx will serve for,
+# e.g., 'http://localhost', 'https://yourdomain.com'
+# This is especially important if you are using HTTPS.
+# The values from your .env file should be updated accordingly.
+
+# If you are using HTTPS, also consider:
+# SECURE_SSL_REDIRECT = True # If all traffic should be HTTPS
+# SESSION_COOKIE_SECURE = True
+# CSRF_COOKIE_SECURE = True

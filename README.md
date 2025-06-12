@@ -1,11 +1,17 @@
 # Wiki2
 Wiki2 is een iteratie op de hiervoor bestaande examenwiki. Ze is sneller, simpeler en modern gemaakt.
 
-## Superuser
-> See .env
+## TODO
+### SSL/TLS
+To configure SSL/TLS go to docker-compose, change the ports and configure nginx to server over https. Also visit the bottom of setting.py to see what configurationchanges are needed there.
+
+### Login/LDAP
+Make StuCard werkende enzo...
 
 ## Possible security concerns:
+### LaTeX compiling
 LaTeX is a very powerfull typesetting language. With the right knowledge, **remote code execution** can be achieved! To counteract this **some commands have been blacklisted** but this is **NOT a foolproof solution**. To fully secure ourselves, a docker enviroment with limited file-access and non-root running is advised.
+> The entire application is dockerised and running as non-root. This should be as secure as needs (still not perfect, but the docker is inescapable)
 
 ## Create a .env file if you want to run the docker container and define the following variables:
 ```# Django Settings

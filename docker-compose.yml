@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   db:
-    image: postgres:15-alpine # Using alpine for smaller image
+    image: postgres:15-alpine
     container_name: wiki_postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data/
@@ -10,8 +10,7 @@ services:
       - POSTGRES_DB=${DB_NAME}
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
-    ports: # Optional: expose port to host for external tools, remove for production if not needed
-      - "5433:5432" # Host:Container - Using 5433 to avoid conflict if you have local PG on 5432
+    # No ports exposed to host unless for direct debugging
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
@@ -20,43 +19,56 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine # Using alpine for smaller image
+    image: redis:7-alpine
     container_name: wiki_redis
     volumes:
-      - redis_data:/data # Persist Redis data (optional for cache, but can be useful)
-    ports: # Optional: expose port to host for external tools
-      - "6378:6379" # Host:Container - Using 6378 to avoid conflict
-    restart: unless-stopped
+      - redis_data:/data
+    # No ports exposed to host unless for direct debugging
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   web:
     build: .
     container_name: wiki_django_app
-    # command: gunicorn wiki2_project.wsgi:application --bind 0.0.0.0:8000 --workers 3 --log-level info
-    # For development, you might want to run Django's dev server with auto-reload:
+    # For production, use Gunicorn:
     command: >
-      sh -c "python manage.py runserver 0.0.0.0:8000" # Development server
-    # For production, use Gunicorn (uncomment and comment out runserver):
+      sh -c "gunicorn wiki2_project.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 2 --worker-class gthread --log-level info --access-logfile - --error-logfile -"
+    # For development (if you switch back, Nginx won't get static files from runserver properly without more config):
     # command: >
-    #  sh -c "gunicorn wiki2_project.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 2 --worker-class gthread --log-level info --access-logfile - --error-logfile -"
+    #   sh -c "python manage.py runserver 0.0.0.0:8000"
     volumes:
-      - ./:/app # Mount current directory to /app for live code reloading (development)
-                # For production, you might remove this or mount specific subdirectories if needed
-      - static_volume:/app/staticfiles # Persist collected static files
-      - media_volume:/app/media     # Persist uploaded media files
-    ports:
-      - "${APP_PORT:-8000}:8000" # Map host port (from .env or default 8000) to container port 8000
+      # For production, you might not mount the code if it's baked into the image.
+      # For dev, this is useful:
+      - ./:/app
+      - static_volume:/app/staticfiles # Django collects static files here
+      - media_volume:/app/media     # Django saves media files here
     env_file:
-      - .env # Load environment variables from .env file
+      - .env
     depends_on:
       db:
-        condition: service_healthy # Wait for db to be healthy
+        condition: service_healthy
       redis:
-        condition: service_healthy # Wait for redis to be healthy
+        condition: service_healthy
+    restart: unless-stopped
+    # No 'ports' section here anymore, Nginx will handle external port mapping.
+
+  nginx:
+    image: nginx:1.25-alpine # Use a specific version, alpine for smaller size
+    container_name: wiki_nginx
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro # Mount Nginx config
+      - static_volume:/vol/static:ro        # Mount static files (read-only for Nginx)
+      - media_volume:/vol/media:ro          # Mount media files (read-only for Nginx)
+    ports:
+      - "${APP_PORT:-80}:80" # Map host port (from .env or default 80) to Nginx port 80
+      # FIXME: TODO: For HTTPS, you would map 443:443 and configure SSL in Nginx 
+      # - "443:443"
+    depends_on:
+      - web # Nginx should start after the web application is likely up
     restart: unless-stopped
 
 volumes:
