@@ -1,20 +1,35 @@
 # Wiki2
 Wiki2 is een iteratie op de hiervoor bestaande examenwiki. Ze is sneller, simpeler en modern gemaakt.
 
-## Setup
-De Python dependencies worden beheerd aan de hand van `uv`. Dat is dus de tool die je allereerst moet [installeren](https://docs.astral.sh/uv/getting-started/installation/). Check dat het juist geïnstalleerd is door gewoon `uv` uit te voeren (je zou een overzicht van de beschikbare commando's moeten krijgen).
-
-### Klaarmaken voor gebruik
-
-Alles begint natuurlijk met het clonen van de repo. Vervolgens kun je je lokale omgeving klaar voor gebruik maken door `uv sync --frozen` uit te voeren (dit maakt ook automatisch een virtual environment aan), of een Django development server uitvoeren met `uv run manage.py runserver` (in het algemeen worden alle `python <programma>.py`-commando's vervangen door `uv run <programma>.py`). 
-
-### Code schrijven in de praktijk
-
-Een extra dependency introduceren doe je met `uv add <naam-van-package>`. Dit wordt dan automatisch geïnstalleerd. Door dit te doen zal ook het bestand `uv.lock` veranderen; dit is volledig normaal. 
-
 ## Superuser
-usr: `Webteam`
-pwd: `Webt3am@Wiki2`
+> See .env
 
 ## Possible security concerns:
 LaTeX is a very powerfull typesetting language. With the right knowledge, **remote code execution** can be achieved! To counteract this **some commands have been blacklisted** but this is **NOT a foolproof solution**. To fully secure ourselves, a docker enviroment with limited file-access and non-root running is advised.
+
+## Create a .env file if you want to run the docker container and define the following variables:
+```# Django Settings
+DJANGO_SECRET_KEY='HAHAHA_HIER_KOMT_EEN_SECRETKEY'
+DJANGO_DEBUG=True
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,10.1.1.224
+DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000,http://10.1.1.224:8000
+
+# Application Port (host side)
+APP_PORT=8000
+
+# PostgreSQL Settings
+DB_ENGINE=django.db.backends.postgresql
+DB_NAME=wikidb
+DB_USER=wikiuser
+DB_PASSWORD=wikipassword
+DB_HOST=db # This is the service name from docker-compose.yml
+DB_PORT=5432 # Default PostgreSQL port inside the container network
+
+# Redis Settings
+REDIS_HOST=redis # This is the service name from docker-compose.yml
+REDIS_PORT=6379 # Default Redis port inside the container network
+
+# Django Superuser Credentials
+DJANGO_SUPERUSER_USERNAME=Webteam
+DJANGO_SUPERUSER_EMAIL=Webteam@wina.be
+DJANGO_SUPERUSER_PASSWORD=HAHAHA_HIER_KOMT_EEN_WACHTWOORD```
