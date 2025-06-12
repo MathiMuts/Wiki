@@ -7,7 +7,6 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Install system dependencies (for builder stage)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
@@ -15,49 +14,61 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # --- Builder Stage (for Python dependencies) ---
 FROM base AS builder
-# WORKDIR /app is inherited
 COPY requirements.txt .
 RUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
 
 # --- Final Stage ---
 FROM base AS final
-# WORKDIR /app is inherited
 
 ARG APP_USER=appuser
 
-# Install runtime system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     libpq5 \
     netcat-openbsd \
+    texlive-latex-base \
+    texlive-fonts-recommended \
+    texlive-latex-extra \
+    texlive-fonts-extra \
+    libpango-1.0-0 \
+    libcairo2 \
+    libgdk-pixbuf2.0-0 \
+    libpangoft2-1.0-0 \
+    gosu \
+    cron \
+    gzip \
     && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean # Clean up apt cache
+    && apt-get clean
 
-# Create user and group
 RUN groupadd -r ${APP_USER} && useradd --no-log-init -r -g ${APP_USER} -d /home/${APP_USER} -m ${APP_USER}
 
-# Copy pre-built wheels and install Python dependencies
 COPY --from=builder /wheels /wheels
 RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
 
-# --- Application Setup ---
-# Explicitly copy entrypoint.sh first and set permissions
+# --- Application and Backup Scripts Setup ---
+COPY backup_scripts/backup.sh /backup_scripts/backup.sh
+COPY backup_scripts/prune_backups.sh /backup_scripts/prune_backups.sh
+COPY backup_scripts/crontab.txt /etc/cron.d/backup_cron
+
+RUN chmod +x /backup_scripts/backup.sh && \
+    chmod +x /backup_scripts/prune_backups.sh
+
+RUN chmod 0644 /etc/cron.d/backup_cron
+
+RUN touch /var/log/cron.log && \
+    chown ${APP_USER}:${APP_USER} /var/log/cron.log
+
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
-
-# Copy the rest of the application code
 COPY . .
 
-# Create media/static dirs and set ownership (within /app)
-RUN mkdir -p /app/staticfiles /app/media
+RUN mkdir -p /app/staticfiles /app/media /backups_volume && \
+    chown -R ${APP_USER}:${APP_USER} /app && \
+    chown ${APP_USER}:${APP_USER} /backups_volume
 
-# Change ownership of the entire app directory to the app user
-RUN chown -R ${APP_USER}:${APP_USER} /app
 
-# Switch to non-root user
-USER ${APP_USER}
+# USER ${APP_USER} # User is not set to not-root because there is something called `gosu` that will let us start the app as a non-root user (appuser) later.
 
-# Expose port
 EXPOSE 8000
 
-# Define ENTRYPOINT
 ENTRYPOINT ["/app/entrypoint.sh"]

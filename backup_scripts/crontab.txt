@@ -1,0 +1,5 @@
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+0 3 * * * appuser . /home/appuser/project_env.sh && /backup_scripts/backup.sh >> /var/log/cron.log 2>&1
+

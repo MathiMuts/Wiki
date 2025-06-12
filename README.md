@@ -8,22 +8,29 @@ To configure SSL/TLS go to docker-compose, change the ports and configure nginx 
 ### Login/LDAP
 Make StuCard werkende enzo...
 
+### Test backup script en cron
+There is a backupscript and folder, but it is unknown if it works because it needs the container to be running (at 3am) for it to try make a backup.
+
+### Schrijf een deftige readme
+Huidige readme is outdated en slecht.
+
 ## Possible security concerns:
 ### LaTeX compiling
 LaTeX is a very powerfull typesetting language. With the right knowledge, **remote code execution** can be achieved! To counteract this **some commands have been blacklisted** but this is **NOT a foolproof solution**. To fully secure ourselves, a docker enviroment with limited file-access and non-root running is advised.
 > The entire application is dockerised and running as non-root. This should be as secure as needs (still not perfect, but the docker is inescapable)
 
 ## Create a .env file if you want to run the docker container and define the following variables:
-```# Django Settings
-DJANGO_SECRET_KEY='HAHAHA_HIER_KOMT_EEN_SECRETKEY'
+```
+# Django Settings
+DJANGO_SECRET_KEY='HIHIII_HIER_KOMT_EEN_SECRETKEY'
 DJANGO_DEBUG=True
-DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,10.1.1.224
-DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000,http://10.1.1.224:8000
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,10.1.1.224 # TODO:Add your actual domain for production
+DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000,http://10.1.1.224:8000 # TODO:Add your actual domain for production
 
 # Application Port (host side)
-APP_PORT=8000
+APP_PORT=80
 
-# PostgreSQL Settings
+# PostgreSQL Settings # FIXME: COMMENT IN/OUT FOR DOCKER
 DB_ENGINE=django.db.backends.postgresql
 DB_NAME=wikidb
 DB_USER=wikiuser
@@ -38,4 +45,5 @@ REDIS_PORT=6379 # Default Redis port inside the container network
 # Django Superuser Credentials
 DJANGO_SUPERUSER_USERNAME=Webteam
 DJANGO_SUPERUSER_EMAIL=Webteam@wina.be
-DJANGO_SUPERUSER_PASSWORD=HAHAHA_HIER_KOMT_EEN_WACHTWOORD```
+DJANGO_SUPERUSER_PASSWORD=HOHOOO_DIT_IS_EEN_WACHTWOORD
+```

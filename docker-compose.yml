@@ -46,6 +46,7 @@ services:
       - ./:/app
       - static_volume:/app/staticfiles # Django collects static files here
       - media_volume:/app/media     # Django saves media files here
+      - ./backups:/backups_volume   # Mount backups directory
     env_file:
       - .env
     depends_on:
