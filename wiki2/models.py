@@ -388,3 +388,8 @@ class ExamPage(models.Model):
         if self.pdf_file and self.pdf_file.name:
             return reverse('wiki:exam_download', kwargs={'parent_slug': self.parent_page.slug, 'exam_slug': self.slug})
         return None
+    
+    def get_url(self):
+        if self.pdf_file and self.pdf_file.name:
+            return reverse('wiki:exam', kwargs={'parent_slug': self.parent_page.slug, 'exam_slug': self.slug})
+        return None

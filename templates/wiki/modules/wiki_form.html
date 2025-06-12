@@ -78,7 +78,7 @@
             {% for exam in exam_subpages %}
                 <li class="file-item">
                     {% if exam.pdf_file %}
-                        <a href="{{ exam.pdf_file.url }}" target="_blank" class="file-link">{{ exam.slug }}</a>
+                        <a href="{{ exam.get_url }}" target="_blank" class="file-link">{{ exam.slug }}</a>
                     {% else %}
                         <div style="font-weight: 500; color: var(--secondary-text-color)">{{ exam.slug }}</div>
                     {% endif %}

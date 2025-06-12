@@ -527,3 +527,24 @@ def exam_download(request, parent_slug, exam_slug):
     except Exception as e:
         messages.error(request, f"Error serving PDF for '{exam.title}': {e}")
         return redirect(exam.parent_page.get_absolute_url())
+    
+def exam(request, parent_slug, exam_slug):
+    exam = get_object_or_404(ExamPage, parent_page__slug=parent_slug, slug=exam_slug)
+
+    if not exam.pdf_file or not os.path.exists(exam.pdf_file.path):
+        messages.info(request, f"PDF for '{exam.title}' was missing, attempting to regenerate...")
+        success, msg = exam.compile_and_save_pdf(force_recompile=True)
+        if not success or not exam.pdf_file or not os.path.exists(exam.pdf_file.path):
+            messages.error(request, f"Could not generate or find PDF for '{exam.title}'. Error: {msg}")
+            return redirect(exam.parent_page.get_absolute_url())
+        exam.refresh_from_db()
+
+
+    try:
+        return FileResponse(open(exam.pdf_file.path, 'rb'), filename=exam._get_base_pdf_filename())
+    except FileNotFoundError:
+        messages.error(request, f"PDF file for '{exam.title}' not found on the server, even after trying to regenerate.")
+        return redirect(exam.parent_page.get_absolute_url())
+    except Exception as e:
+        messages.error(request, f"Error serving PDF for '{exam.title}': {e}")
+        return redirect(exam.parent_page.get_absolute_url())

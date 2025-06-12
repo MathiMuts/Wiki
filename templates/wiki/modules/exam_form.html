@@ -61,7 +61,7 @@
     {% if exam and exam.pdf_file %}
         <hr style="margin: 2rem 0;">
         <h4>Current PDF:</h4>
-        <p><a class="wikilink" href="{{ exam.pdf_file.url }}" target="_blank">{{ exam.pdf_file.name|cut:"wiki_exams/"|cut:parent_page.slug|cut:"/" }}</a></p>
+        <p><a class="wikilink" href="{{ exam.get_url }}" target="_blank">{{ exam.pdf_file.name|cut:"wiki_exams/"|cut:parent_page.slug|cut:"/" }}</a></p>
     {% endif %}
 
 <script>
@@ -112,6 +112,7 @@
 \\maketitle
 
 % Write your exam content here. Use LaTeX commands for formatting.
+% External files such as images are currently not supported.
 
 \\end{document}`;
 

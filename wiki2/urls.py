@@ -16,6 +16,7 @@ urlpatterns = [
     path('<slug:slug>/download_file/<int:file_id>/', views.page_download_file, name='page_download_file'),
 
     path('<slug:parent_slug>/exam/create/', views.exam_create, name='exam_create'),
+    path('<slug:parent_slug>/exam/<slug:exam_slug>/', views.exam, name='exam'),
     path('<slug:parent_slug>/exam/<slug:exam_slug>/edit/', views.exam_edit, name='exam_edit'),
     path('<slug:parent_slug>/exam/<slug:exam_slug>/delete/', views.exam_delete, name='exam_delete'),
     path('<slug:parent_slug>/exam/<slug:exam_slug>/download/', views.exam_download, name='exam_download'),
