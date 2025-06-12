@@ -163,6 +163,7 @@ textarea.exam-content-textarea {
     font-weight: 400;
     font-style: normal;
     background-color: var(--card-color);
+    padding: 1.5rem;
 }
 textarea#wiki-form-content-textarea::-webkit-scrollbar,
 textarea.exam-content-textarea::-webkit-scrollbar {
