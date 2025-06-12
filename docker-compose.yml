@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine # Using alpine for smaller image
+    container_name: wiki_postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    ports: # Optional: expose port to host for external tools, remove for production if not needed
+      - "5433:5432" # Host:Container - Using 5433 to avoid conflict if you have local PG on 5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine # Using alpine for smaller image
+    container_name: wiki_redis
+    volumes:
+      - redis_data:/data # Persist Redis data (optional for cache, but can be useful)
+    ports: # Optional: expose port to host for external tools
+      - "6378:6379" # Host:Container - Using 6378 to avoid conflict
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    container_name: wiki_django_app
+    # command: gunicorn wiki2_project.wsgi:application --bind 0.0.0.0:8000 --workers 3 --log-level info
+    # For development, you might want to run Django's dev server with auto-reload:
+    command: >
+      sh -c "python manage.py runserver 0.0.0.0:8000" # Development server
+    # For production, use Gunicorn (uncomment and comment out runserver):
+    # command: >
+    #  sh -c "gunicorn wiki2_project.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 2 --worker-class gthread --log-level info --access-logfile - --error-logfile -"
+    volumes:
+      - ./:/app # Mount current directory to /app for live code reloading (development)
+                # For production, you might remove this or mount specific subdirectories if needed
+      - static_volume:/app/staticfiles # Persist collected static files
+      - media_volume:/app/media     # Persist uploaded media files
+    ports:
+      - "${APP_PORT:-8000}:8000" # Map host port (from .env or default 8000) to container port 8000
+    env_file:
+      - .env # Load environment variables from .env file
+    depends_on:
+      db:
+        condition: service_healthy # Wait for db to be healthy
+      redis:
+        condition: service_healthy # Wait for redis to be healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_volume:
+  media_volume:
