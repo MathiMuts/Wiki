@@ -8,15 +8,57 @@ from urllib.parse import urlencode
 from .models import WikiPage, WikiFile, ExamPage
 from .forms import WikiPageForm, WikiFileForm, ExamPageForm
 
+from django.conf import settings
 from django.urls import reverse
 from django.http import Http404, HttpResponse, JsonResponse, FileResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.text import slugify
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
 from django.contrib import messages
-from django.utils.text import slugify
 
+def login_view(request):
+    if request.method == 'GET':
+        next_url = request.GET.get('next')
+        admin_login_url = reverse('admin:login')
+
+        if next_url:
+            return redirect(f'{admin_login_url}?next={next_url}')
+        else:
+            return redirect(admin_login_url)
+
+    elif request.method == 'POST':
+        admin_login_url = reverse('admin:login')
+        next_url = request.POST.get('next', request.GET.get('next'))
+        if next_url:
+             return redirect(f'{admin_login_url}?next={next_url}')
+        return redirect(admin_login_url)
+
+@login_required
+def logout_view(request):
+    previous_page = request.META.get('HTTP_REFERER')
+    logout_url = request.build_absolute_uri(reverse('wiki:logout'))
+
+    if previous_page:
+        if not url_has_allowed_host_and_scheme(
+            url=previous_page,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            previous_page = None
+        elif previous_page == logout_url:
+            previous_page = None
+
+    logout(request)
+    messages.info(request, "You have been successfully logged out.")
+
+    if previous_page:
+        return redirect(previous_page)
+    else:
+        return redirect(getattr(settings, 'LOGOUT_REDIRECT_URL', reverse('wiki:wiki')))
 
 def search(request):
     query = request.GET.get('q', '').strip()

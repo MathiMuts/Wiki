@@ -31,6 +31,10 @@ ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STRING.split(',') if hos
 if not ALLOWED_HOSTS:
     ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '10.1.1.224']
 
+LOGIN_URL="wiki:login"
+LOGOUT_URL="wiki:logout"
+LOGIN_REDIRECT_URL="wiki:wiki"
+LOGOUT_REDIRECT_URL="wiki:wiki"
 
 # INFO: Application definition
 INSTALLED_APPS = [

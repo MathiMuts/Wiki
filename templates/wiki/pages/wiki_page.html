@@ -23,7 +23,7 @@
                     <a href="{% url 'wiki:exam_create' parent_slug=page.slug %}" class="button-styled button-create">Create New Exam</a>
                     <a href="{% url 'wiki:page_create' %}" class="button-styled button-warn">Create New Page</a>
                 {% else %}
-                    <a href="{% url 'login' %}?next={{request.path}}" class="button-styled button-warn">Login to edit</a>
+                    <a href="{% url 'wiki:login' %}?next={{request.path}}" class="button-styled button-edit">Login to edit</a>
                 {% endif %} 
             </div>
         </div>

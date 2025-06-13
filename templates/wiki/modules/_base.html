@@ -17,11 +17,8 @@
     <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
   </head>
 
-
-
-
-
 <div id="page">
+    {% include "./_profile_widget.html" %}
     {% include "./_menu.html" %}
 
     <div id="wiki-content">
@@ -31,5 +28,6 @@
         {% endblock %}
     </div>
 </div>
+1
 <script src="{% static 'wiki/JS/wiki_utils.js' %}" defer></script>
 <script src="{% static 'wiki/JS/wiki_editor_enhancements.js' %}" defer></script>

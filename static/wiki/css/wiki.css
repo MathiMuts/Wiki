@@ -101,7 +101,7 @@ input[type="file"]::file-selector-button {
     background-color: var(--wiki-button-warning-bg);
     color: var(--wiki-button-warning-text);
 }
-.actions button.delete, .button-delete, .file-delete-btn, .subpage-delete-btn.warn {
+.actions button.delete, .button-delete, .button-danger, .file-delete-btn, .subpage-delete-btn.warn {
     background-color: var(--wiki-button-danger-bg);
     color: var(--wiki-button-danger-text);
 }
