@@ -36,6 +36,10 @@ LOGOUT_URL="wiki:logout"
 LOGIN_REDIRECT_URL="wiki:wiki"
 LOGOUT_REDIRECT_URL="wiki:wiki"
 
+NTFY_BASE_URL="https://ntfy.sh/" # "https://ntfy.sh/"
+NTFY_TOPIC="WinaLeuven-Webteam-Admin"
+
+
 # INFO: Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',

@@ -4,6 +4,7 @@ import mimetypes
 import markdown2
 from . import utils
 from . import constants
+from requests import post
 from urllib.parse import urlencode
 from .models import WikiPage, WikiFile, ExamPage
 from .forms import WikiPageForm, WikiFileForm, ExamPageForm
@@ -247,10 +248,20 @@ def page_edit(request, slug):
 @login_required
 def page_delete(request, slug):
     page = get_object_or_404(WikiPage, slug=slug)
+
     if request.method == 'POST':
-        page_title = page.title
+
+        post(f"{settings.NTFY_BASE_URL}{settings.NTFY_TOPIC}",
+        data=f"The examenwiki-page '{page.title}' has been deleted by {request.user}",
+        headers={
+            "Title": f"Examenwiki Page Deleted",
+            "Priority": f"3", # 1 is no ping, 3 is with ping (sound notification)
+            "Tags": f"warning", # OR wastebasket, warning, no_entry_sign, triangular_flag_on_post
+            "Click": f"{reverse('wiki:wiki')}",
+        })
+        
         page.delete()
-        messages.success(request, f"Page '{page_title}' deleted successfully.")
+        messages.success(request, f"Page '{page.title}' deleted successfully.")
         return redirect('wiki:wiki')
     return render(request, 'wiki/pages/page_confirm_delete.html', {'page': page})
 
@@ -400,9 +411,18 @@ def exam_delete(request, parent_slug, exam_slug):
     parent_page = get_object_or_404(WikiPage, slug=parent_slug)
     exam = get_object_or_404(ExamPage, parent_page=parent_page, slug=exam_slug)
     if request.method == 'POST':
-        exam_title = exam.title
+
+        post(f"{settings.NTFY_BASE_URL}{settings.NTFY_TOPIC}",
+        data=f"The examenwiki-exam '{exam.title}' has been deleted by {request.user}",
+        headers={
+            "Title": f"Examenwiki Exam Deleted",
+            "Priority": f"3", # 1 is no ping, 3 is with ping (sound notification)
+            "Tags": f"warning", # OR wastebasket, warning, no_entry_sign, triangular_flag_on_post
+            "Click": f"{reverse('wiki:wiki')}",
+        })
+
         exam.delete()
-        messages.success(request, f"Exam '{exam_title}' deleted successfully.")
+        messages.success(request, f"Exam '{exam.title}' deleted successfully.")
         return redirect(parent_page.get_absolute_url())
     return render(request, 'wiki/pages/exam_confirm_delete.html', {'exam': exam, 'parent_page': parent_page})
 
