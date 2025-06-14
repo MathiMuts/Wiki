@@ -9,3 +9,8 @@ wheels/
 # Virtual environments
 .venv
 .env
+
+# runtime
+backups/*
+media/*
+db.sqlite3

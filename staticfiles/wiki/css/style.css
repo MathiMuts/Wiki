@@ -1,0 +1,180 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;900&display=swap');
+
+*, *::before, **::after {
+  box-sizing: border-box;
+}
+
+:root {
+  /* INFO: White theme */
+  --background-color: #ffffff;
+  --card-color: #ffffff;
+
+  --primary-text-color: #000;
+  --secondary-text-color: #454547;
+  --tertiary-text-color: #fafafc;
+
+  /* INFO: Classic Yellow*/
+  /* --background-color: #f3f3e8;
+  --card-color: rgb(248, 248, 240);
+
+   --primary-text-color: #000;
+  --secondary-text-color: #454547;
+  --tertiary-text-color: #fafafc; */
+
+  --secondary-background-color: #eeeeee;    /* FIXME: manually change this value in static/manifest.json, this is the mobile background colour*/
+  --primary-background-color: var(--background-color);
+}
+
+body {
+  font-family: "Barlow", sans-serif;
+  color: var(--primary-text-color);
+  font-size: 120%;
+  background-color: var(--primary-background-color);
+}
+hr, .hr {
+  border: none;
+  opacity: .25;
+  border-top: 2px solid var(--primary-text-color);
+}
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+margin-top: 0;
+margin-bottom: 0;
+font-weight: 500;
+line-height: 1.2;
+font-family: inherit;
+}
+h1, .h1 {
+  font-size: calc(1.375rem + 1.5vw);
+  margin-bottom: .5rem;
+}
+h2, .h2 {
+  font-size: calc(1.325rem + 0.9vw);
+  margin-bottom: .5rem;
+}
+h3, .h3 {
+  font-size: calc(1.3rem + 0.6vw);
+}
+h4, .h4 {
+  font-size: calc(1.275rem + 0.3vw);
+}
+@media (min-width: 1200px) {
+  h1, .h1 {
+    font-size: 2.5rem;
+  }
+  h2, .h2 {
+    font-size: 2rem;
+  }
+  h3, .h3 {
+    font-size: 1.75rem;
+  }
+  h4, .h4 {
+  font-size: 1.5rem;
+  }
+}
+h5, .h5 {
+  font-size: 1.25rem;
+}
+h6, .h6 {
+  font-size: 1rem;
+}
+.logo {
+  font-family: "Archivo", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 900;
+  font-style: normal;
+  font-variation-settings: "wdth" 100;  
+  color: var(--primary-text-color);
+  text-decoration: none;
+  letter-spacing: -2.2pt;
+  font-size: 30px;
+}
+.link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+.secondary-text {
+  color: var(--secondary-text-color);
+  font-size: 90%;
+}
+.mobile-only {
+  display: none;
+}
+@media (max-width: 1100px) {
+  .desktop-only {
+    display: none;
+  }
+  .mobile-only {
+    display: block;
+  }
+}
+.card, .card-plain {
+  background-color: var(--card-color);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0px 10px 30px 0px rgba(0, 0, 0, 0.1);
+  transition: opacity 0.2s ease, box-shadow 0.2s ease;
+  opacity: 1;
+  transition: transform 0.3s ease;
+}
+.card:hover {
+    box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.2);
+    transform: scale(0.98);
+}
+.input {
+  width: 100%;
+  height: 2rem;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid var(--secondary-background-color);
+  box-shadow: 0px 10px 30px 0px rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  overflow-y: hidden;
+  background-color: inherit;
+}
+.input:focus {
+  border-color: var(--secondary-background-color);
+  box-shadow: 0px 10px 30px 0px rgba(0, 0, 0, 0.2);
+  outline: none;
+}
+.button-primary {
+  box-shadow: 0px 10px 30px 0px rgba(0, 0, 0, 0.1);
+  transition: opacity 0.2s ease, box-shadow 0.2s ease;
+  opacity: 1;
+  border: 2px solid transparent;
+  border-radius: 20px;
+  background-color: var(--secondary-text-color);
+  color: var(--tertiary-text-color);
+  cursor: pointer;
+}
+.button-secondary {
+  box-shadow: 0px 10px 30px 0px rgba(0, 0, 0, 0.1);
+  transition: opacity 0.2s ease, box-shadow 0.2s ease;
+  opacity: 1;
+  border: 2px solid transparent;
+  border-radius: 20px;
+  background-color: var(--tertiary-text-color);
+  color: var(--secondary-text-color);
+  cursor: pointer;
+}
+.button-transparent {
+  border: 2px solid transparent;
+  border-radius: 20px;
+  background-color: transparent;
+  color: var(--primary-text-color);
+  cursor: pointer;
+}
+.button-primary:hover {
+  box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.5);
+  background-color: var(--secondary-text-color);
+  color: var(--tertiary-text-color);
+}
+.button-secondary:hover {
+  box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.2);
+  background-color: var(--tertiary-text-color);
+  color: var(--secondary-text-color);
+}

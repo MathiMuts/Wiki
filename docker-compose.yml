@@ -60,6 +60,24 @@ services:
       - web
     restart: unless-stopped
 
+  backups:
+    build: .
+    user: root
+    container_name: wiki_backups
+    env_file:
+      - .env
+    environment:
+      - BACKUP_TIME=${BACKUP_TIME}
+    volumes:
+      - ./:/app
+      - media_volume:/app/media:ro
+      - ./backups:/backups_archive
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: ["sh", "/app/cron_entrypoint.sh"]
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:

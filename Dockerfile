@@ -22,6 +22,8 @@ FROM base AS final
 
 ARG APP_USER=appuser
 
+ENV TZ=Europe/Brussels
+
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     libpq5 \
@@ -34,7 +36,9 @@ RUN apt-get update && \
     libcairo2 \
     libgdk-pixbuf2.0-0 \
     libpangoft2-1.0-0 \
-    gzip \
+    cron \
+    zip \
+    procps \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -45,10 +49,12 @@ RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
 
 # --- Application Setup ---
 COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+COPY cron_entrypoint.sh /app/cron_entrypoint.sh
+RUN chmod +x /app/entrypoint.sh /app/cron_entrypoint.sh
+
 COPY . .
 
-RUN mkdir -p /app/staticfiles /app/media /backups_volume && \
+RUN mkdir -p /app/staticfiles /app/media && \
     chown -R ${APP_USER}:${APP_USER} /app
 
 # Switch to non-root
