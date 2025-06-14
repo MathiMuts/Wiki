@@ -15,7 +15,7 @@
             <li class="file-item">
                 <a href="{{ file_attachment.file.url }}" target="_blank" class="file-link">{{ file_attachment.filename_display }}</a>
                 <small class="file-meta">
-                    - Uploaded: {{ file_attachment.uploaded_at|date:"M d, Y" }}
+                    ({{ file_attachment.filename_slug }}) - Uploaded: {{ file_attachment.uploaded_at|date:"M d, Y" }}
                     {% if file_attachment.uploaded_by %}
                         by {{ file_attachment.uploaded_by.username }}
                     {% endif %}

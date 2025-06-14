@@ -21,8 +21,8 @@
                 {% else %}
                     <div style="font-weight: 500; color: var(--secondary-text-color);">{{ exam.title }}</div>
                 {% endif %}
-                <small class="file-meta"> ({{ exam.slug }})
-                    - Last updated: {{ exam.updated_at|date:"M d, Y" }}
+                <small class="file-meta">
+                    ({{ exam.slug }}) - Last updated: {{ exam.updated_at|date:"M d, Y" }}
                     {% if exam.last_modified_by %}by {{ exam.last_modified_by.username }}{% endif %}
                 </small>
                 
