@@ -47,3 +47,12 @@ DJANGO_SUPERUSER_USERNAME=Webteam
 DJANGO_SUPERUSER_EMAIL=Webteam@wina.be
 DJANGO_SUPERUSER_PASSWORD=HOHOOO_DIT_IS_EEN_WACHTWOORD
 ```
+##
+Profiles:
+> Webteam
+>
+> `Webt3am@Wiki2` 
+
+> govert
+>
+> `Govert123` 

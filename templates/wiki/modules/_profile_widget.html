@@ -1,5 +1,32 @@
+{% comment %} templates/wiki/modules/_profile_widget.html {% endcomment %}
+{% load static %}
+
 {% if user.is_authenticated %}
-    <a href="{% url 'wiki:logout' %}?next={{request.path}}" class="button-styled button-danger" style="position: fixed; top: 2rem; right: 2rem;">Log out</a>
+    {% with num_actions_for_widget=user.is_superuser|yesno:"3,2" %}
+    <div class="profile-widget profile-widget-animate" style="--num-actions: {{ num_actions_for_widget }};" data-widget-type="expandable">
+    {% endwith %}
+        {# The avatar is the main trigger for opening/closing #}
+        <div class="avatar-display" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-controls="actions-tray-{{ view.unique_id|default:'1' }}">
+            <img src="{% static 'wiki/icons/default-avatar.jpg'%}" alt="User Avatar">
+        </div>
+        <div class="actions-tray" id="actions-tray-{{ view.unique_id|default:'1' }}" role="menu">
+            <a href="{% url 'wiki:logout' %}?next={{request.path}}" class="action-icon" role="menuitem" aria-label="Log Out">
+                <img src="{% static 'wiki/icons/exit.svg'%}" alt="Log Out">
+            </a>
+            <a href="{% url 'wiki:profile' %}" class="action-icon" role="menuitem" aria-label="View Profile">
+                <img src="{% static 'wiki/icons/user.svg'%}" alt="User Profile">
+            </a>
+            {% if user.is_superuser %}
+            <a href="{% url 'admin:index' %}" class="action-icon" role="menuitem" aria-label="Admin Panel">
+                <img src="{% static 'wiki/icons/admin.svg'%}" alt="Admin Panel">
+            </a>
+            {% endif %}
+        </div>
+    </div>
 {% else %}
-    <a href="{% url 'wiki:login' %}?next={{request.path}}" class="button-styled button-edit" style="position: fixed; top: 2rem; right: 2rem;">Login to edit</a>
-{% endif %} 
+    <div class="profile-widget" data-widget-type="link">
+        <a href="{% url 'wiki:login' %}?next={{request.path}}" class="avatar-display login-link" aria-label="Log In">
+            <img src="{% static 'wiki/icons/login.png'%}" alt="Log In Icon">
+        </a>
+    </div>
+{% endif %}

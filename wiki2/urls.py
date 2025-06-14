@@ -8,6 +8,7 @@ urlpatterns = [
     path('', views.wiki, name='wiki'),
     path('search/', views.search, name='search'),
     path('login/', views.login_view, name='login'),
+    path('profile/', views.profile, name='profile'),
     path('logout/', views.logout_view, name='logout'),
     path('all/', views.all_wiki_pages, name='all_pages'),
     path('create/', views.page_create, name='page_create'),

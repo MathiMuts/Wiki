@@ -61,6 +61,10 @@ def logout_view(request):
     else:
         return redirect(getattr(settings, 'LOGOUT_REDIRECT_URL', reverse('wiki:wiki')))
 
+@login_required
+def profile(request):
+    return render(request, 'wiki/pages/profile.html', {'user': request.user})
+
 def search(request):
     query = request.GET.get('q', '').strip()
     results = []
