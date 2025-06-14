@@ -2,34 +2,9 @@
 
 set -e
 
-# --- NOTE: This part runs as root ---
 echo "Entrypoint script started as user: $(whoami)"
 
 echo "Creating environment file for cron jobs..."
-ENV_FILE_CRON="/home/${APP_USER:-appuser}/project_env.sh"
-
-#!/bin/sh
-set -e
-
-echo "Entrypoint script started as user: $(whoami)"
-
-echo "Creating environment file for cron jobs..."
-ENV_FILE_CRON="/home/${APP_USER:-appuser}/project_env.sh"
-
-echo "#!/bin/sh" > "$ENV_FILE_CRON"
-echo "# Environment variables for cron jobs" >> "$ENV_FILE_CRON"
-printenv | grep -E '^(DB_HOST|DB_USER|DB_NAME|DB_PASSWORD|DJANGO_SETTINGS_MODULE|APP_USER)' | \
-  sed -e 's/^\(.*\)$/export \1/g' -e 's/"/\\"/g' -e "s/'/'\"'\"'/g" -e 's/\(.*\)/"\1"/g' >> "$ENV_FILE_CRON"
-if [ -n "$DB_PASSWORD" ]; then
-    echo "export PGPASSWORD=\"$DB_PASSWORD\"" >> "$ENV_FILE_CRON"
-fi
-chown "${APP_USER:-appuser}:${APP_USER:-appuser}" "$ENV_FILE_CRON"
-chmod +x "$ENV_FILE_CRON"
-echo "Cron environment file created at $ENV_FILE_CRON"
-
-echo "Starting cron daemon..."
-cron
-echo "Cron daemon started."
 
 # --- Wait for services, run migrations etc. (can still be root or drop privs early for these) ---
 if [ -n "$DB_HOST" ] && [ -n "$DB_PORT" ]; then
@@ -41,17 +16,15 @@ if [ -n "$DB_HOST" ] && [ -n "$DB_PORT" ]; then
 fi
 
 # --- NOTE: This part runs as non-root ---
-CURRENT_APP_USER="${APP_USER:-appuser}"
+echo "Applying database migrations..."
+python manage.py migrate --noinput
 
-echo "Applying database migrations (as $CURRENT_APP_USER)..."
-gosu "$CURRENT_APP_USER" python manage.py migrate --noinput
-
-echo "Collecting static files (as $CURRENT_APP_USER)..."
-gosu "$CURRENT_APP_USER" python manage.py collectstatic --noinput --clear
+echo "Collecting static files..."
+python manage.py collectstatic --noinput --clear
 
 if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ]; then
-  echo "Attempting to create superuser $DJANGO_SUPERUSER_USERNAME (as $CURRENT_APP_USER)..."
-  gosu "$CURRENT_APP_USER" python manage.py shell <<EOF
+  echo "Attempting to create superuser $DJANGO_SUPERUSER_USERNAME..."
+  python manage.py shell <<EOF
 import os
 from django.contrib.auth import get_user_model
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
@@ -83,6 +56,6 @@ echo "DJANGO_SUPERUSER_USERNAME and/or DJANGO_SUPERUSER_PASSWORD not set. Skippi
 fi
 
       
-echo "Starting application server (as $CURRENT_APP_USER)..."
-exec gosu "$CURRENT_APP_USER" "$@"
+echo "Starting application server..."
+exec "$@"
 ```

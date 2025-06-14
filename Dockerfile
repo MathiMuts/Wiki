@@ -34,8 +34,6 @@ RUN apt-get update && \
     libcairo2 \
     libgdk-pixbuf2.0-0 \
     libpangoft2-1.0-0 \
-    gosu \
-    cron \
     gzip \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
@@ -45,29 +43,16 @@ RUN groupadd -r ${APP_USER} && useradd --no-log-init -r -g ${APP_USER} -d /home/
 COPY --from=builder /wheels /wheels
 RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
 
-# --- Application and Backup Scripts Setup ---
-COPY backup_scripts/backup.sh /backup_scripts/backup.sh
-COPY backup_scripts/prune_backups.sh /backup_scripts/prune_backups.sh
-COPY backup_scripts/crontab.txt /etc/cron.d/backup_cron
-
-RUN chmod +x /backup_scripts/backup.sh && \
-    chmod +x /backup_scripts/prune_backups.sh
-
-RUN chmod 0644 /etc/cron.d/backup_cron
-
-RUN touch /var/log/cron.log && \
-    chown ${APP_USER}:${APP_USER} /var/log/cron.log
-
+# --- Application Setup ---
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 COPY . .
 
 RUN mkdir -p /app/staticfiles /app/media /backups_volume && \
-    chown -R ${APP_USER}:${APP_USER} /app && \
-    chown ${APP_USER}:${APP_USER} /backups_volume
+    chown -R ${APP_USER}:${APP_USER} /app
 
-
-# USER ${APP_USER} # User is not set to not-root because there is something called `gosu` that will let us start the app as a non-root user (appuser) later.
+# Switch to non-root
+USER ${APP_USER}
 
 EXPOSE 8000
 
