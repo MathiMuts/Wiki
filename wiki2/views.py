@@ -24,7 +24,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.contrib import messages
 from django.core.cache import cache
-from heic2png import HEIC2PNG # INFO: Deze error is een leugen
+from heic2png import HEIC2PNG # INFO: ERROR IS EEN LEUGEN
 
 def login_view(request):
     if request.method == 'GET':

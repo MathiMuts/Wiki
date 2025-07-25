@@ -37,7 +37,7 @@ LOGIN_REDIRECT_URL="wiki:wiki"
 LOGOUT_REDIRECT_URL="wiki:wiki"
 
 NTFY_BASE_URL="https://ntfy.sh/" # "https://ntfy.sh/"
-NTFY_TOPIC="WinaLeuven-Webteam-Admin"
+NTFY_TOPIC="Mathimuts-Wiki"
 
 
 # INFO: File Upload Settings

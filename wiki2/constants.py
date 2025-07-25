@@ -69,16 +69,7 @@ This wiki uses Markdown for formatting content. Here are some common examples:
 ### Links
 - [This is an external link to the Markdown docs.](https://www.markdownguide.org/) `[This is an external link to the Markdown docs.](https://www.markdownguide.org/)`
 - [[ Use double square brackets to link to other pages within this wiki.| Menu Config ]] `[[ Menu Config ]]` or `[[ Display Text | Menu Config ]]`
-- [Use links to attached files to link them in the text.](test.pdf) `[Display Text.](test.pdf)`
-
-### Images
-![Alt text for an image](https://picsum.photos/200/300)
-![Alt text for an image](test)
-
-```
-![Alt text for an image](https://picsum.photos/200/300)
-![This image is attatched below](test)
-```
+- [Use links to attached files to link them in the text.](test-document.pdf) `[Display Text.](test-document.pdf)`
 
 ### Blockquotes
 > This is a blockquote.
@@ -136,6 +127,29 @@ ___
 | Cell 1.1      | Cell 1.2      | Cell 1.3      |
 | Cell 2.1      | **Cell 2.2** (can have Markdown) | Cell 2.3      |
 | `Cell 3.1`    | Cell 3.2      | _Cell 3.3_    |
+```
+
+### Images
+![Alt text for an image](https://picsum.photos/200/300)
+![Alt text for an image](test-image.jpg)
+
+```
+![Alt text for an image](https://picsum.photos/200/300)
+![This image is attatched below](test-image.jpg)
+```
+
+### PDFs
+![This PDF is attatched below](test-document.pdf)
+
+```
+![This PDF is attatched below](test-document.pdf)
+```
+
+### Image galleries
+![Alt text for an image gallery](test-archive)
+
+```
+![Alt text for an image gallery](test-archive)
 ```
 
 Happy Wiki-ing!
