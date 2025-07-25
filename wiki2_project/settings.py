@@ -226,3 +226,9 @@ LOGGING = {
 # SECURE_SSL_REDIRECT = True # If all traffic should be HTTPS
 # SESSION_COOKIE_SECURE = True
 # CSRF_COOKIE_SECURE = True
+
+# INFO: For <iframe> tags (to render PDFs)
+# By default, Django sets this to 'DENY'.
+# We change it to 'SAMEORIGIN' to allow embedding of our own content (like PDFs)
+# in iframes, while still protecting against clickjacking from external sites.
+X_FRAME_OPTIONS = 'SAMEORIGIN'

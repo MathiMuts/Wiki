@@ -178,3 +178,13 @@ h6, .h6 {
   background-color: var(--tertiary-text-color);
   color: var(--secondary-text-color);
 }
+iframe {
+  height: 90vh;
+  aspect-ratio: 1 / 1.414;
+}
+
+.pdf-embed-container {
+  margin-bottom: 1em;
+  display: flex;
+  justify-content: center;
+}

@@ -185,11 +185,25 @@ def markdown_image_replacer_factory(current_page=None):
         if attached_file:
             try:
                 file_url = attached_file.file.url
-                return f'![{escaped_alt_text}]({file_url})'
+                _, file_extension = os.path.splitext(attached_file.file.name)
+
+                if file_extension.lower() == '.pdf':
+                    # It's a PDF, so embed it with an iframe.
+                    return f'''<div class="pdf-embed-container">
+                                   <iframe src="{file_url}" title="Embedded PDF: {escaped_alt_text}">
+                                       <p>Your browser does not support embedded PDFs. Please <a href="{file_url}" target="_blank">download the PDF</a> to view it.</p>
+                                   </iframe>
+                               </div>'''
+                else:
+                    # It's another type of file (presumably an image), so return standard markdown
+                    # for the final markdown processor to render as an <img> tag.
+                    return f'![{escaped_alt_text}]({file_url})'
             except Exception:
-                return f'<span class="filelink-error" title="Error resolving URL for image: {escape(src_text)}">Image: {escaped_alt_text} (file URL error)</span>'
+                # Updated error message for clarity
+                return f'<span class="filelink-error" title="Error resolving URL for file: {escape(src_text)}">File: {escaped_alt_text} (URL error)</span>'
         else:
-            return f'<span class="filelink-missing" title="Image file not found on this page: {escape(src_text)}">Image: {escaped_alt_text} (file not found)</span>'
+            # Updated error message for clarity
+            return f'<span class="filelink-missing" title="Image or PDF file not found on this page: {escape(src_text)}">File: {escaped_alt_text} (not found)</span>'
 
     return image_replacer
 
