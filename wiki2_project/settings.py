@@ -48,6 +48,11 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5 MB
 # The maximum size, in bytes, of a request body.
 # This affects file uploads. Set it larger than your Nginx limit.
 DATA_UPLOAD_MAX_MEMORY_SIZE = 11811160064 # 11 GB
+# For files: owner can read/write, group can read, others can read. (644)
+FILE_UPLOAD_PERMISSIONS = 0o644
+# For directories: owner can read/write/execute, group can read/execute, others can read/execute. (755)
+FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
+
 
 # INFO: Application definition
 INSTALLED_APPS = [

@@ -33,7 +33,7 @@ services:
     command: >
       sh -c "gunicorn wiki2_project.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 2 --worker-class gthread --timeout 660 --log-level info --access-logfile - --error-logfile -"
     volumes:
-      - ./:/app
+      # - ./:/app
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     env_file:
