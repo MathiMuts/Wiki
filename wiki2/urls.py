@@ -12,6 +12,9 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('all/', views.all_wiki_pages, name='all_pages'),
     path('create/', views.page_create, name='page_create'),
+
+    path('files/view-in-archive/<int:file_id>/', views.view_image_in_archive, name='view_image_in_archive'),
+    
     path('<slug:slug>/', views.wiki_page, name='wiki_page'),
     path('<slug:slug>/edit/', views.page_edit, name='page_edit'),
     path('<slug:slug>/delete/', views.page_delete, name='page_delete'),

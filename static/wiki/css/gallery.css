@@ -1,0 +1,129 @@
+/* static/wiki/css/gallery.css (Grid Layout Version) */
+
+/* --- Archive Gallery Styling --- */
+.archive-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+
+    width: 90vw;
+    max-width: 100%;
+    margin: 1.5em auto;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f0f2f5;
+    box-sizing: border-box;
+
+}
+
+.archive-gallery .gallery-item-link {
+    display: block;
+    border-radius: 6px;
+    overflow: hidden;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    cursor: zoom-in;    
+    aspect-ratio: 1;
+
+}
+
+.archive-gallery .gallery-item-link:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}
+
+.archive-gallery .gallery-item-link img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    background-color: #e0e0e0;
+    margin: 0;
+}
+
+body.lightbox-active {
+    overflow: hidden;
+}
+
+.lightbox-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+}
+
+.lightbox-content {
+    position: relative;
+    text-align: center;
+}
+
+#lightbox-image {
+    max-width: 90vw;
+    max-height: 85vh;
+    animation: zoomIn 0.3s ease-in-out;
+    border-radius: 4px;
+}
+
+#lightbox-caption {
+    margin-top: 10px;
+    color: #eee;
+    font-size: 0.9em;
+}
+
+@keyframes zoomIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.lightbox-close {
+    position: absolute;
+    top: 15px;
+    right: 35px;
+    color: #fff;
+    font-size: 40px;
+    font-weight: bold;
+    transition: 0.3s;
+    cursor: pointer;
+}
+
+.lightbox-close:hover {
+    color: #bbb;
+}
+
+.lightbox-prev, .lightbox-next {
+    cursor: pointer;
+    position: absolute;
+    top: 50%;
+    width: auto;
+    padding: 16px;
+    margin-top: -30px;
+    color: white;
+    font-weight: bold;
+    font-size: 24px;
+    transition: 0.3s;
+    user-select: none;
+    background-color: rgba(0,0,0,0.3);
+    border-radius: 0 3px 3px 0;
+}
+
+.lightbox-prev {
+    left: 0;
+    border-radius: 3px 0 0 3px;
+}
+
+.lightbox-next {
+    right: 0;
+    border-radius: 3px 0 0 3px;
+}
+
+.lightbox-prev:hover, .lightbox-next:hover {
+    background-color: rgba(0,0,0,0.6);
+}

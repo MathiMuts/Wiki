@@ -31,7 +31,7 @@ services:
     build: .
     container_name: wiki_django_app
     command: >
-      sh -c "gunicorn wiki2_project.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 2 --worker-class gthread --log-level info --access-logfile - --error-logfile -"
+      sh -c "gunicorn wiki2_project.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 2 --worker-class gthread --timeout 660 --log-level info --access-logfile - --error-logfile -"
     volumes:
       - ./:/app
       - static_volume:/app/staticfiles

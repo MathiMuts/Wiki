@@ -1,19 +1,20 @@
 # wiki/views.py
 import os
+import zipfile
+import tarfile
 import mimetypes
 import markdown2
 from . import utils
 from . import constants
 from requests import post
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote
 from .models import WikiPage, WikiFile
 from .forms import WikiPageForm, WikiFileForm
 
 from django.conf import settings
 from django.urls import reverse
-from django.http import Http404, HttpResponse, JsonResponse, FileResponse
+from django.http import Http404, HttpResponse, JsonResponse, HttpResponseBadRequest 
 from django.shortcuts import render, get_object_or_404, redirect
-from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.text import slugify
 from django.db.models import Q
@@ -339,3 +340,50 @@ def page_delete_file(request, slug, file_id):
             return JsonResponse({'status': 'error', 'message': 'Could not delete file.'}, status=500)
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request method. Only POST is allowed.'}, status=405)
+
+@login_required
+def view_image_in_archive(request, file_id):
+    """
+    Dynamically extracts and serves a single image from within a zip or tar archive.
+    This view is protected by login_required.
+    """
+    wiki_file = get_object_or_404(WikiFile, pk=file_id)
+    image_path = request.GET.get('path')
+
+    if not image_path:
+        return HttpResponseBadRequest("Missing 'path' parameter.")
+
+    if '..' in image_path or image_path.startswith('/'):
+        return HttpResponseBadRequest("Invalid image path.")
+
+    archive_filename = wiki_file.file.name
+    _, archive_ext = os.path.splitext(archive_filename.lower())
+
+    try:
+        with wiki_file.file.open('rb') as archive_file_obj:
+            image_bytes = None
+            
+            if archive_ext == '.zip':
+                with zipfile.ZipFile(archive_file_obj, 'r') as zf:
+                    if image_path in zf.namelist():
+                        image_bytes = zf.read(image_path)
+                    
+            elif archive_ext in ['.tar', '.gz', '.bz2', '.xz']:
+                with tarfile.open(fileobj=archive_file_obj, mode='r:*') as tf:
+                    for member in tf.getmembers():
+                        if member.name == image_path and member.isfile():
+                            extracted_file = tf.extractfile(member)
+                            if extracted_file:
+                                image_bytes = extracted_file.read()
+                            break
+
+            if image_bytes:
+                content_type, _ = mimetypes.guess_type(image_path)
+                return HttpResponse(image_bytes, content_type=content_type or 'application/octet-stream')
+            else:
+                raise Http404(f"Image '{image_path}' not found in archive.")
+
+    except (zipfile.BadZipFile, tarfile.TarError):
+        raise Http404("Archive file is corrupted or invalid.")
+    except Exception:
+        raise Http404("Could not read image from archive.")

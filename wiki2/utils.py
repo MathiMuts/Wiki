@@ -11,6 +11,12 @@ import os
 from django.utils.html import escape
 from django.conf import settings
 from . import constants
+from urllib.parse import urlencode, parse_qsl, quote
+from django.core.cache import cache
+import zipfile
+import tarfile
+from django.template.loader import render_to_string
+
 
 def escape_markdown_chars(text):
     if not text:
@@ -145,65 +151,131 @@ def standard_markdown_link_replacer_factory(current_page=None):
 
     return replacer
 
+def _parse_pdf_embed_params(param_string):
+    """
+    Safely parses a string of parameters (e.g., "page=5&toolbar=0")
+    into a URL-encoded string, only allowing a specific set of keys.
+    """
+    if not param_string:
+        return ""
+    ALLOWED_PDF_PARAMS = ['page', 'zoom', 'view', 'toolbar', 'navpanes', 'scrollbar']
+    params = parse_qsl(param_string)
+    safe_params = {key: value for key, value in params if key in ALLOWED_PDF_PARAMS}
+    return urlencode(safe_params)
+
+def _get_image_list_from_archive(wiki_file):
+    """
+    Inspects an archive file (zip, tar) in memory. If it contains ONLY 
+    allowed image types, it returns a sorted list of their paths. 
+    Otherwise, it returns None.
+    """
+    archive_filename = wiki_file.file.name
+    _, archive_ext = os.path.splitext(archive_filename.lower())
+    PICTURE_EXTENSIONS = tuple(constants.WIKI_PICTURE_EXTENSIONS)
+
+    image_paths = []
+    try:
+        with wiki_file.file.open('rb') as file_obj:
+            all_files_are_images = True
+            
+            if archive_ext == '.zip':
+                with zipfile.ZipFile(file_obj, 'r') as zf:
+                    file_list = [f for f in zf.namelist() if not f.endswith('/') and not f.startswith('__MACOSX')]
+                    if not file_list: return None
+                    for name in file_list:
+                        if name.lower().endswith(PICTURE_EXTENSIONS):
+                            image_paths.append(name)
+                        else:
+                            all_files_are_images = False; break
+            
+            elif archive_ext in ['.tar', '.gz', '.bz2', '.xz']:
+                with tarfile.open(fileobj=file_obj, mode='r:*') as tf:
+                    member_list = [m for m in tf.getmembers() if m.isfile()]
+                    if not member_list: return None
+                    for member in member_list:
+                        if member.name.lower().endswith(PICTURE_EXTENSIONS):
+                            image_paths.append(member.name)
+                        else:
+                            all_files_are_images = False; break
+            
+            return sorted(image_paths) if all_files_are_images else None
+    except (zipfile.BadZipFile, tarfile.TarError):
+        return None
+    
 def markdown_image_replacer_factory(current_page=None):
     if not current_page:
-        def no_page_image_replacer(match):
-            return match.group(0)
+        def no_page_image_replacer(match): return match.group(0)
         return no_page_image_replacer
 
     page_files_list = list(current_page.files.all())
+    ARCHIVE_EXTENSIONS = tuple(constants.WIKI_ARCHIVE_EXTENSIONS)
 
     def image_replacer(match):
         alt_text = match.group(1)
         src_text = match.group(2).strip()
+        title_text = match.group(3) or match.group(4)
         escaped_alt_text = escape(alt_text)
 
         if src_text.startswith(('http://', 'https://', '//', '/')):
             return match.group(0)
 
         attached_file = None
-        
         src_stem, src_ext = os.path.splitext(src_text)
         src_ext = src_ext.lower()
-
         for pf in page_files_list:
-            if pf.filename_display.lower() == src_text.lower():
-                attached_file = pf
-                break
-            
-            if not src_ext:
-                if pf.filename_slug.lower() == src_text.lower():
-                    attached_file = pf
-                    break
-            else:
+            if pf.filename_display.lower() == src_text.lower(): attached_file = pf; break
+            if not src_ext and pf.filename_slug.lower() == src_text.lower(): attached_file = pf; break
+            elif src_ext:
                 _, pf_actual_ext = os.path.splitext(pf.file.name)
-                pf_actual_ext = pf_actual_ext.lower()
-                if pf.filename_slug.lower() == src_stem.lower() and pf_actual_ext == src_ext:
-                    attached_file = pf
-                    break
+                if pf.filename_slug.lower() == src_stem.lower() and pf_actual_ext.lower() == src_ext:
+                    attached_file = pf; break
         
         if attached_file:
             try:
                 file_url = attached_file.file.url
-                _, file_extension = os.path.splitext(attached_file.file.name)
+                file_ext_lower = os.path.splitext(attached_file.file.name)[1].lower()
 
-                if file_extension.lower() == '.pdf':
-                    # It's a PDF, so embed it with an iframe.
+                if file_ext_lower in ARCHIVE_EXTENSIONS:
+                    cache_key = f'wiki_gallery_{attached_file.id}_{attached_file.uploaded_at.timestamp()}'
+                    image_list = cache.get(cache_key)
+                    
+                    if image_list is None:
+                        image_list = _get_image_list_from_archive(attached_file)
+                        cache.set(cache_key, image_list, timeout=3600)
+                    
+                    if image_list:
+                        # --- MODIFIED PART ---
+                        # Instead of building an HTML string, we prepare a context
+                        # and render a template component.
+                        context = {
+                            'images': [],
+                            'alt_text': escaped_alt_text,
+                        }
+                        for image_path in image_list:
+                            img_src_url = reverse('wiki:view_image_in_archive', args=[attached_file.id]) + f'?path={quote(image_path)}'
+                            context['images'].append({'url': img_src_url, 'path': image_path})
+                        
+                        return render_to_string('wiki/modules/_archive_gallery.html', context)
+                    else:
+                        return f'<a href="{file_url}" class="filelink" target="_blank" title="Download archive: {escape(attached_file.filename_display)}">{escaped_alt_text or escape(attached_file.filename_display)}</a>'
+
+                elif file_ext_lower == '.pdf':
+                    pdf_params = _parse_pdf_embed_params(title_text)
+                    iframe_src = f"{file_url}#{pdf_params}" if pdf_params else file_url
                     return f'''<div class="pdf-embed-container">
-                                   <iframe src="{file_url}" title="Embedded PDF: {escaped_alt_text}">
+                                   <iframe src="{iframe_src}" title="Embedded PDF: {escaped_alt_text}">
                                        <p>Your browser does not support embedded PDFs. Please <a href="{file_url}" target="_blank">download the PDF</a> to view it.</p>
                                    </iframe>
                                </div>'''
+                
                 else:
-                    # It's another type of file (presumably an image), so return standard markdown
-                    # for the final markdown processor to render as an <img> tag.
-                    return f'![{escaped_alt_text}]({file_url})'
-            except Exception:
-                # Updated error message for clarity
-                return f'<span class="filelink-error" title="Error resolving URL for file: {escape(src_text)}">File: {escaped_alt_text} (URL error)</span>'
+                    title_part = f' "{escape(title_text)}"' if title_text else ""
+                    return f'![{escaped_alt_text}]({file_url}{title_part})'
+            
+            except Exception as e:
+                return f'<span class="filelink-error" title="Error processing file: {escape(src_text)}">File: {escaped_alt_text} (processing error: {e})</span>'
         else:
-            # Updated error message for clarity
-            return f'<span class="filelink-missing" title="Image or PDF file not found on this page: {escape(src_text)}">File: {escaped_alt_text} (not found)</span>'
+            return f'<span class="filelink-missing" title="File not found on page: {escape(src_text)}">File: {escaped_alt_text} (not found)</span>'
 
     return image_replacer
 

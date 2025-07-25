@@ -40,6 +40,15 @@ NTFY_BASE_URL="https://ntfy.sh/" # "https://ntfy.sh/"
 NTFY_TOPIC="WinaLeuven-Webteam-Admin"
 
 
+# INFO: File Upload Settings
+# Set a max size for files uploaded into memory (in bytes).
+# This is less critical as Django streams large files to disk, but it's good practice.
+# 2.5MB is the default.
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5 MB
+# The maximum size, in bytes, of a request body.
+# This affects file uploads. Set it larger than your Nginx limit.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 11811160064 # 11 GB
+
 # INFO: Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',

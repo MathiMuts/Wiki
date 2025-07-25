@@ -1,0 +1,15 @@
+{% comment %} templates/wiki/modules/_archive_gallery.html {% endcomment %}
+{% load static %}
+
+<link rel="stylesheet", href="{% static 'wiki/css/gallery.css'%}">
+
+{# The container for the horizontally scrolling thumbnails #}
+<div class="archive-gallery">
+    {% for image in images %}
+        <a href="{{ image.url }}" class="gallery-item-link" data-title="{{ image.path|escape }}">
+            <img src="{{ image.url }}" alt="{{ alt_text }}" loading="lazy">
+        </a>
+    {% endfor %}
+</div>
+
+<script src="{% static 'wiki/JS/gallery.js' %}" defer></script>

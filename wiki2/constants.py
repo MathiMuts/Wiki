@@ -175,14 +175,16 @@ DEFAULT_COMMON_FILE_EXTENSIONS = [
     '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
     '.txt', '.md', '.markdown', '.csv', '.rtf', '.odt', '.ods', '.odp',
     '.zip', '.tar', '.gz', '.rar', '.7z',
-    '.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp',
+    '.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.heic',
     '.html', '.htm', '.css', '.js', '.json', '.xml', '.py', '.java', '.c', '.cpp', '.h', '.php', '.rb', '.ipynb',
     '.mp3', '.mp4', '.avi', '.mov', '.mkv', '.webm',
 ]
 
-DANGEROUS_LATEX_COMMANDS_RE = re.compile(
-    r"\\(write18|openin|openout|read|ShellEscape|immediate)\b"
-)
+# --- Picture extensions for gallery ---
+WIKI_PICTURE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.heic']
+
+# --- Archives supported for photo galleries ---
+WIKI_ARCHIVE_EXTENSIONS = ['.zip']
 
 DEFAULT_MARKDOWN_TO_PDF_CSS = """
 @page { size: A4; margin: 2cm; }
