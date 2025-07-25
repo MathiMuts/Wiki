@@ -41,6 +41,9 @@
     object-fit: cover;
     background-color: #e0e0e0;
     margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .archive-gallery .gallery-item-link img:hover {

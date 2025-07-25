@@ -171,7 +171,6 @@ def _get_image_list_from_archive(wiki_file):
     """
     archive_filename = wiki_file.file.name
     _, archive_ext = os.path.splitext(archive_filename.lower())
-    PICTURE_EXTENSIONS = tuple(constants.WIKI_PICTURE_EXTENSIONS)
 
     image_paths = []
     try:
@@ -183,20 +182,15 @@ def _get_image_list_from_archive(wiki_file):
                     file_list = [f for f in zf.namelist() if not f.endswith('/') and not f.startswith('__MACOSX')]
                     if not file_list: return None
                     for name in file_list:
-                        if name.lower().endswith(PICTURE_EXTENSIONS):
-                            image_paths.append(name)
-                        else:
-                            all_files_are_images = False; break
+                        image_paths.append(name)
             
             elif archive_ext in ['.tar', '.gz', '.bz2', '.xz']:
                 with tarfile.open(fileobj=file_obj, mode='r:*') as tf:
                     member_list = [m for m in tf.getmembers() if m.isfile()]
                     if not member_list: return None
                     for member in member_list:
-                        if member.name.lower().endswith(PICTURE_EXTENSIONS):
-                            image_paths.append(member.name)
-                        else:
-                            all_files_are_images = False; break
+                        image_paths.append(member.name)
+                        
             
             return sorted(image_paths) if all_files_are_images else None
     except (zipfile.BadZipFile, tarfile.TarError):
