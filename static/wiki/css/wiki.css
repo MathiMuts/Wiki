@@ -151,8 +151,7 @@ textarea:focus,
     outline: none;
 }
 
-textarea#wiki-form-content-textarea,
-textarea.exam-content-textarea {
+textarea#wiki-form-content-textarea {
     min-height: 300px;
     resize: vertical;
     overflow-y: hidden;
@@ -165,8 +164,7 @@ textarea.exam-content-textarea {
     background-color: var(--card-color);
     padding: 1.5rem;
 }
-textarea#wiki-form-content-textarea::-webkit-scrollbar,
-textarea.exam-content-textarea::-webkit-scrollbar {
+textarea#wiki-form-content-textarea::-webkit-scrollbar {
     display: none; /* Hide scrollbar for WebKit */
 }
 
@@ -294,7 +292,6 @@ input[type="file"]::file-selector-button {
     opacity: 0.85;
 }
 
-/* Exam form specific type selector */
 .type-selector {
     /* Uses .wiki-input-styled now */
     padding-top: 1rem;

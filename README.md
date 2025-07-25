@@ -1,5 +1,5 @@
 # Wiki2
-Wiki2 is een iteratie op de hiervoor bestaande examenwiki. Ze is sneller, simpeler en modern gemaakt.
+Wiki2 is een iteratie op de hiervoor bestaande wiki die geintegreerd was met de site. Ze is sneller, simpeler en modern gemaakt.
 
 ## TODO
 ### SSL/TLS
@@ -41,18 +41,4 @@ DB_PORT=5432 # Default PostgreSQL port inside the container network
 # Redis Settings
 REDIS_HOST=redis # This is the service name from docker-compose.yml
 REDIS_PORT=6379 # Default Redis port inside the container network
-
-# Django Superuser Credentials
-DJANGO_SUPERUSER_USERNAME=Webteam
-DJANGO_SUPERUSER_EMAIL=Webteam@wina.be
-DJANGO_SUPERUSER_PASSWORD=HOHOOO_DIT_IS_EEN_WACHTWOORD
 ```
-##
-Profiles:
-> Webteam
->
-> `Webt3am@Wiki2` 
-
-> govert
->
-> `Govert123` 

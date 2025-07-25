@@ -2,8 +2,6 @@
 {% load static %}
 <link rel="stylesheet" href="{% static 'wiki/css/menu.css'%}">
 
-<a href="{% url 'wiki:wiki' %}"><img src="{% static 'wiki/icons/wina.svg' %}" class="desktop-only" alt="Wina Logo" style="position: fixed; left: calc(2vw - 2.5rem); top: calc(2vw - 38px - 2rem); width: 25rem; z-index: 3; color: var(--primary-text-color);"></a>
-
 <div id="menu" class="card-plain" data-menu-config-slug="{{ MENU_CONFIG_PAGE_SLUG }}">
     <div class="menu-search-container">
         <form id="wikiMenuSearchForm" action="{% url 'wiki:search' %}" method="GET">

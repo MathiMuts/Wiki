@@ -1,8 +1,10 @@
 # wiki/admin.py
 from django.contrib import admin
-from .models import WikiPage, WikiFile
+from .models import WikiPage, WikiFile, Profile
 from django.urls import reverse
 from django.utils.html import format_html
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.models import User
 
 @admin.register(WikiPage)
 class WikiPageAdmin(admin.ModelAdmin):
@@ -37,3 +39,15 @@ class WikiFileAdmin(admin.ModelAdmin):
         if not obj.pk: 
             obj.uploaded_by = request.user
         super().save_model(request, obj, form, change)
+
+class ProfileInline(admin.StackedInline):
+    model = Profile
+    can_delete = False
+    verbose_name_plural = 'Profile'
+    fk_name = 'user'
+
+class UserAdmin(BaseUserAdmin):
+    inlines = (ProfileInline,)
+
+admin.site.unregister(User)
+admin.site.register(User, UserAdmin)

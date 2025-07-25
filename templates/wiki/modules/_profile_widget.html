@@ -7,7 +7,13 @@
     {% endwith %}
         {# The avatar is the main trigger for opening/closing #}
         <div class="avatar-display" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-controls="actions-tray-{{ view.unique_id|default:'1' }}">
-            <img src="{% static 'wiki/icons/default-avatar.jpg'%}" alt="User Avatar">
+            <img src="
+                {% if user.profile.pfp.url %}
+                    {{ user.profile.pfp.url }}
+                {% else %}
+                    {% static 'wiki/icons/default-avatar.jpg'%}
+                {% endif %}
+             " alt="User Avatar">
         </div>
         <div class="actions-tray" id="actions-tray-{{ view.unique_id|default:'1' }}" role="menu">
             <a href="{% url 'wiki:logout' %}?next={{request.path}}" class="action-icon" role="menuitem" aria-label="Log Out">

@@ -129,15 +129,7 @@
 }
 
 .circle {
-    display: inline-block;
-    width: calc(1lh * 0.4);
-    height: calc(1lh * 0.4);
-    border-radius: 50%;
-    margin: 0 10px 0 5px;
-    vertical-align: middle;
-    margin-right: 1rem;
-    background-color: var(--secondary-text-color);
-    transition: background-color 0.2s ease-in-out;
+    display: hidden;
 }
 
 @media (max-width: 1100px) {
@@ -185,7 +177,7 @@
 
 @media (min-width: 1101px) {
     #menu {
-        top: calc(2vw + 70px);
+        top: calc(2vw);
         bottom: 2vw;
         left: 2vw;
         width: 21rem;
@@ -220,6 +212,17 @@
         width: auto;
         text-align: left;
         padding: 0;
+    }
+    .circle {
+        display: inline-block;
+         width: calc(1lh * 0.4);
+        height: calc(1lh * 0.4);
+        border-radius: 50%;
+        margin: 0 10px 0 5px;
+        vertical-align: middle;
+        margin-right: 1rem;
+        background-color: var(--secondary-text-color);
+        transition: background-color 0.2s ease-in-out;
     }
 }
 

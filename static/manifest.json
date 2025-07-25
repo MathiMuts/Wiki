@@ -1,6 +1,6 @@
 {
-    "name": "Wina ExamenWiki",
-    "short_name": "ExamenWiki",
+    "name": "MathiWiki",
+    "short_name": "Wiki",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#ffffff",

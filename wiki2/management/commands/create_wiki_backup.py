@@ -7,7 +7,7 @@ from django.conf import settings
 from wiki2.models import WikiPage
 
 class Command(BaseCommand):
-    help = 'Creates a backup of all wiki pages, their content, attachments, and exam source codes.'
+    help = 'Creates a backup of all wiki pages, their content and attachments.'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -78,26 +78,6 @@ class Command(BaseCommand):
                              self.stderr.write(self.style.WARNING(f"    - Attachment object for page '{page_slug_for_path}' lacks file or path attribute."))
                 else:
                     self.stdout.write(f"  - No attachments for '{page_slug_for_path}'")
-
-                # NOTE: 3. Save exam generating code
-                exams = page.exam_subpages.all() 
-                if exams.exists():
-                    exams_dir = os.path.join(page_backup_content_dir, 'exams')
-                    os.makedirs(exams_dir, exist_ok=True)
-                    for exam in exams:
-                        exam_slug_for_path = exam.slug if exam.slug else f"exam-id-{exam.id}"
-                        file_extension = '.txt'
-                        if exam.page_type == 'markdown':
-                            file_extension = '.md'
-                        elif exam.page_type == 'latex':
-                            file_extension = '.tex'
-                        exam_code_filename = f"{exam_slug_for_path}{file_extension}"
-                        exam_code_path = os.path.join(exams_dir, exam_code_filename)
-                        with open(exam_code_path, 'w', encoding='utf-8') as f:
-                            f.write(exam.content)
-                        self.stdout.write(f"    - Saved exam code: {exam_code_filename} for exam '{exam.title}'")
-                else:
-                    self.stdout.write(f"  - No exams for '{page_slug_for_path}'")
 
             zip_filename = f"{timestamp}.zip"
             zip_filepath = os.path.join(output_dir, zip_filename)

@@ -158,37 +158,12 @@ DEFAULT_MENU_CONFIG = """
         ]
     },
     {
-        "title": "Wiskunde",
-        "section_link_slug": "wiskunde",
-        "title_color": "purple",
+        "title": "Second section",
+        "section_link_slug": "2nd-section",
+        "title_color": "green",
         "items": [
-            {"text": "1ˢᵗᵉ Bachelor", "slug": "w1b", "circle_color": "purple"},
-            {"text": "2ᵈᵉ Bachelor", "slug": "w2b", "circle_color": "purple"},
-            {"text": "3ᵈᵉ Bachelor", "slug": "w3b", "circle_color": "purple"},
-            {"text": "1ˢᵗᵉ Master", "slug": "w1m", "circle_color": "purple"},
-            {"text": "2ᵈᵉ Master", "slug": "w2m", "circle_color": "purple"}
-        ]
-    },
-    {
-        "title": "Fysica",
-        "section_link_slug": "fysica",
-        "title_color": "darkorange",
-        "items": [
-            {"text": "1ˢᵗᵉ Bachelor", "slug": "f1b", "circle_color": "darkorange"},
-            {"text": "2ᵈᵉ Bachelor", "slug": "f2b", "circle_color": "darkorange"},
-            {"text": "3ᵈᵉ Bachelor", "slug": "f3b", "circle_color": "darkorange"},
-            {"text": "1ˢᵗᵉ Master", "slug": "f1m", "circle_color": "darkorange"},
-            {"text": "2ᵈᵉ Master", "slug": "f2m", "circle_color": "darkorange"}
-        ]
-    },
-    {
-        "title": "Informatica",
-        "section_link_slug": "informatica",
-        "title_color": "crimson",
-        "items": [
-            {"text": "1ˢᵗᵉ Bachelor", "slug": "i1b", "circle_color": "crimson"},
-            {"text": "2ᵈᵉ Bachelor", "slug": "i2b", "circle_color": "crimson"},
-            {"text": "3ᵈᵉ Bachelor", "slug": "i3b", "circle_color": "crimson"}
+            {"text": "1ˢᵗᵉ item", "slug": "1-item-default", "circle_color": "green"},
+            {"text": "2ᵈᵉ item", "slug": "2-item-default", "circle_color": "green"}
         ]
     }
 ]

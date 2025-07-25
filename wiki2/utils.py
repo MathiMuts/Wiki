@@ -1,6 +1,6 @@
 # wiki/utils.py
 from django.urls import reverse, NoReverseMatch
-from .models import WikiPage, ExamPage
+from .models import WikiPage
 from django.utils.text import slugify
 from django.db.models import Q
 from io import BytesIO
@@ -60,12 +60,9 @@ def wikilink_replacer_factory(current_page=None):
 
 def standard_markdown_link_replacer_factory(current_page=None):
     page_files_list = []
-    exam_subpages_list = []
 
     if current_page:
         page_files_list = list(current_page.files.all())
-        if hasattr(current_page, 'exam_subpages'):
-            exam_subpages_list = list(current_page.exam_subpages.all())
 
     COMMON_FILE_EXTENSIONS = getattr(settings, 'WIKI_COMMON_FILE_EXTENSIONS', constants.DEFAULT_COMMON_FILE_EXTENSIONS)
 
@@ -98,29 +95,6 @@ def standard_markdown_link_replacer_factory(current_page=None):
 
         if resolved_page:
             return f'<a href="{resolved_page.get_absolute_url()}" class="wikilink">{display_link_text}</a>'
-
-        if current_page and exam_subpages_list:
-            resolved_exam = None
-            for exam in exam_subpages_list:
-                if exam.slug.lower() == target_path_or_url.lower():
-                    resolved_exam = exam
-                    break
-            if not resolved_exam:
-                for exam in exam_subpages_list:
-                    if exam.title.lower() == target_path_or_url.lower():
-                        resolved_exam = exam
-                        break
-            
-            if resolved_exam and resolved_exam.pdf_file and resolved_exam.pdf_file.name:
-                try:
-                    exam_pdf_url = resolved_exam.get_url()
-                    if not exam_pdf_url and resolved_exam.pdf_file:
-                        exam_pdf_url = resolved_exam.pdf_file.url
-
-                    if exam_pdf_url:
-                        return f'<a href="{exam_pdf_url}" class="filelink exam-pdflink" target="_blank" title="View exam PDF: {escape(resolved_exam.title)}">{display_link_text}</a>'
-                except Exception:
-                    pass
 
         if current_page:
             attached_file = None
@@ -159,7 +133,7 @@ def standard_markdown_link_replacer_factory(current_page=None):
         looks_like_file = any(target_path_or_url.lower().endswith(ext) for ext in COMMON_FILE_EXTENSIONS)
 
         if looks_like_file:
-            return f'<span class="filelink-missing" title="File or Exam PDF not found on this page: {escaped_target_for_titles}">{display_link_text} (file not found)</span>'
+            return f'<span class="filelink-missing" title="File not found on this page: {escaped_target_for_titles}">{display_link_text} (file not found)</span>'
         else:
             try:
                 create_slug_param = slugify(target_path_or_url)

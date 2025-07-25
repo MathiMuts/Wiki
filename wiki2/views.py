@@ -6,8 +6,8 @@ from . import utils
 from . import constants
 from requests import post
 from urllib.parse import urlencode
-from .models import WikiPage, WikiFile, ExamPage
-from .forms import WikiPageForm, WikiFileForm, ExamPageForm
+from .models import WikiPage, WikiFile
+from .forms import WikiPageForm, WikiFileForm
 
 from django.conf import settings
 from django.urls import reverse
@@ -65,6 +65,7 @@ def logout_view(request):
 def profile(request):
     return render(request, 'wiki/pages/profile.html', {'user': request.user})
 
+@login_required
 def search(request):
     query = request.GET.get('q', '').strip()
     results = []
@@ -96,6 +97,7 @@ def search(request):
         messages.warning(request, f"No results found for '{query}'.")
         return redirect('wiki:wiki')
 
+@login_required
 def wiki(request):
     landing_page = None
     page_title = constants.ROOT_WIKI_PAGE_SLUG.replace('-', ' ').title()
@@ -135,14 +137,15 @@ def wiki(request):
             'list_title': "Wiki Error",
         })
 
+@login_required
 def all_wiki_pages(request):
     pages = WikiPage.objects.all().order_by('-updated_at')
     return render(request, 'wiki/pages/wiki_list.html', {'pages': pages, 'list_title': "All Wiki Pages"})
 
+@login_required
 def wiki_page(request, slug):
     try:
         page = WikiPage.objects.get(slug=slug)
-        exam_subpages = page.exam_subpages.all().order_by('created_at')
         processed_markdown_content = utils.preprocess_markdown_with_links(page.content, current_page=page)
         html_content = markdown2.markdown(processed_markdown_content, extras=["fenced-code-blocks", "tables", "nofollow", "header-ids", "break-on-newline"])
         qr = utils.qr_img(request)
@@ -153,7 +156,6 @@ def wiki_page(request, slug):
             'html_content': html_content,
             'qrcode': qr,
             'page_files': page_files,
-            'exam_subpages': exam_subpages,
         })
 
     except WikiPage.DoesNotExist:
@@ -227,7 +229,6 @@ def page_edit(request, slug):
     page = get_object_or_404(WikiPage, slug=slug)
     page_files = page.files.all().order_by('-uploaded_at')
     upload_form = WikiFileForm()
-    exam_subpages = page.exam_subpages.all().order_by('created_at')
 
     if request.method == 'POST':
         form = WikiPageForm(request.POST, instance=page)
@@ -246,7 +247,6 @@ def page_edit(request, slug):
         'action': 'Edit',
         'page_files': page_files,
         'upload_form': upload_form,
-        'exam_subpages': exam_subpages,
     })
 
 @login_required
@@ -256,9 +256,9 @@ def page_delete(request, slug):
     if request.method == 'POST':
 
         post(f"{settings.NTFY_BASE_URL}{settings.NTFY_TOPIC}",
-        data=f"The examenwiki-page '{page.title}' has been deleted by {request.user}",
+        data=f"The wiki-page '{page.title}' has been deleted by {request.user}",
         headers={
-            "Title": f"Examenwiki Page Deleted",
+            "Title": f"Wiki Page Deleted",
             "Priority": f"3", # 1 is no ping, 3 is with ping (sound notification)
             "Tags": f"warning", # OR wastebasket, warning, no_entry_sign, triangular_flag_on_post
             "Click": f"{reverse('wiki:wiki')}",
@@ -301,6 +301,7 @@ def page_upload_file(request, slug):
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request method. Only POST is allowed.'}, status=405)
 
+@login_required
 def page_download_file(request, slug, file_id):
     page = get_object_or_404(WikiPage, slug=slug)
     wiki_file = get_object_or_404(WikiFile, id=file_id, page=page)
@@ -338,136 +339,3 @@ def page_delete_file(request, slug, file_id):
             return JsonResponse({'status': 'error', 'message': 'Could not delete file.'}, status=500)
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request method. Only POST is allowed.'}, status=405)
-
-@login_required
-def exam_create(request, parent_slug):
-    parent_page = get_object_or_404(WikiPage, slug=parent_slug)
-
-    if request.method == 'POST':
-        form = ExamPageForm(request.POST, parent_page=parent_page)
-        if form.is_valid():
-            exam = form.save(commit=False)
-            exam.parent_page = parent_page
-            exam.last_modified_by = request.user
-            exam.save()
-
-            success, message = exam.compile_and_save_pdf(force_recompile=True)
-            if success:
-                messages.success(request, f"Exam '{exam.title}' created. {message}")
-            else:
-                messages.warning(request, f"Exam '{exam.title}' created, but PDF generation failed: {message}")
-            return redirect(parent_page.get_absolute_url())
-    else:
-        now_str = timezone.now().strftime("%b %d, %Y")
-        default_slug_date_str = timezone.now().strftime("%d-%m-%Y")
-
-        default_title = f"Exam {parent_page.title}: {now_str}"
-        default_slug = f"{parent_page.slug}-{default_slug_date_str}"
-
-        initial_data = {
-            'title': default_title,
-            'slug': default_slug,
-        }
-        form = ExamPageForm(initial=initial_data, parent_page=parent_page)
-
-    return render(request, 'wiki/pages/exam_form.html', {
-        'form': form,
-        'parent_page': parent_page,
-        'action': 'Create',
-        'exam': None,
-    })
-
-@login_required
-def exam_edit(request, parent_slug, exam_slug):
-    parent_page = get_object_or_404(WikiPage, slug=parent_slug)
-    exam = get_object_or_404(ExamPage, parent_page=parent_page, slug=exam_slug)
-
-    if request.method == 'POST':
-        form = ExamPageForm(request.POST, instance=exam, parent_page=parent_page)
-        if form.is_valid():
-            edited_exam = form.save(commit=False)
-            edited_exam.last_modified_by = request.user
-
-            recompile_hint = False
-            if 'content' in form.changed_data or 'page_type' in form.changed_data:
-                recompile_hint = True
-
-            edited_exam.save()
-
-            success, message = edited_exam.compile_and_save_pdf(force_recompile=recompile_hint)
-            if success:
-                messages.success(request, f"Exam '{edited_exam.title}' updated. {message}")
-            else:
-                messages.warning(request, f"Exam '{edited_exam.title}' updated, but PDF processing failed: {message}")
-            return redirect(parent_page.get_absolute_url())
-    else:
-        form = ExamPageForm(instance=exam, parent_page=parent_page)
-
-    return render(request, 'wiki/pages/exam_form.html', {
-        'form': form,
-        'exam': exam,
-        'parent_page': parent_page,
-        'action': 'Edit'
-    })
-
-@login_required
-def exam_delete(request, parent_slug, exam_slug):
-    parent_page = get_object_or_404(WikiPage, slug=parent_slug)
-    exam = get_object_or_404(ExamPage, parent_page=parent_page, slug=exam_slug)
-    if request.method == 'POST':
-
-        post(f"{settings.NTFY_BASE_URL}{settings.NTFY_TOPIC}",
-        data=f"The examenwiki-exam '{exam.title}' has been deleted by {request.user}",
-        headers={
-            "Title": f"Examenwiki Exam Deleted",
-            "Priority": f"3", # 1 is no ping, 3 is with ping (sound notification)
-            "Tags": f"warning", # OR wastebasket, warning, no_entry_sign, triangular_flag_on_post
-            "Click": f"{reverse('wiki:wiki')}",
-        })
-
-        exam.delete()
-        messages.success(request, f"Exam '{exam.title}' deleted successfully.")
-        return redirect(parent_page.get_absolute_url())
-    return render(request, 'wiki/pages/exam_confirm_delete.html', {'exam': exam, 'parent_page': parent_page})
-
-def exam_download(request, parent_slug, exam_slug):
-    exam = get_object_or_404(ExamPage, parent_page__slug=parent_slug, slug=exam_slug)
-
-    if not exam.pdf_file or not os.path.exists(exam.pdf_file.path):
-        messages.info(request, f"PDF for '{exam.title}' was missing, attempting to regenerate...")
-        success, msg = exam.compile_and_save_pdf(force_recompile=True)
-        if not success or not exam.pdf_file or not os.path.exists(exam.pdf_file.path):
-            messages.error(request, f"Could not generate or find PDF for '{exam.title}'. Error: {msg}")
-            return redirect(exam.parent_page.get_absolute_url())
-        exam.refresh_from_db()
-
-
-    try:
-        return FileResponse(open(exam.pdf_file.path, 'rb'), as_attachment=True, filename=exam._get_base_pdf_filename())
-    except FileNotFoundError:
-        messages.error(request, f"PDF file for '{exam.title}' not found on the server, even after trying to regenerate.")
-        return redirect(exam.parent_page.get_absolute_url())
-    except Exception as e:
-        messages.error(request, f"Error serving PDF for '{exam.title}': {e}")
-        return redirect(exam.parent_page.get_absolute_url())
-
-def exam(request, parent_slug, exam_slug):
-    exam = get_object_or_404(ExamPage, parent_page__slug=parent_slug, slug=exam_slug)
-
-    if not exam.pdf_file or not os.path.exists(exam.pdf_file.path):
-        messages.info(request, f"PDF for '{exam.title}' was missing, attempting to regenerate...")
-        success, msg = exam.compile_and_save_pdf(force_recompile=True)
-        if not success or not exam.pdf_file or not os.path.exists(exam.pdf_file.path):
-            messages.error(request, f"Could not generate or find PDF for '{exam.title}'. Error: {msg}")
-            return redirect(exam.parent_page.get_absolute_url())
-        exam.refresh_from_db()
-
-
-    try:
-        return FileResponse(open(exam.pdf_file.path, 'rb'), filename=exam._get_base_pdf_filename())
-    except FileNotFoundError:
-        messages.error(request, f"PDF file for '{exam.title}' not found on the server, even after trying to regenerate.")
-        return redirect(exam.parent_page.get_absolute_url())
-    except Exception as e:
-        messages.error(request, f"Error serving PDF for '{exam.title}': {e}")
-        return redirect(exam.parent_page.get_absolute_url())
