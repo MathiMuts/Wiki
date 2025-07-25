@@ -4,10 +4,12 @@ import zipfile
 import tarfile
 import mimetypes
 import markdown2
+import hashlib
+import tempfile
 from . import utils
 from . import constants
 from requests import post
-from urllib.parse import urlencode, quote
+from urllib.parse import urlencode
 from .models import WikiPage, WikiFile
 from .forms import WikiPageForm, WikiFileForm
 
@@ -21,6 +23,8 @@ from django.db.models import Q
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.contrib import messages
+from django.core.cache import cache
+from heic2png import HEIC2PNG # INFO: Deze error is een leugen
 
 def login_view(request):
     if request.method == 'GET':
@@ -346,6 +350,7 @@ def view_image_in_archive(request, file_id):
     """
     Dynamically extracts and serves a single image from within a zip or tar archive.
     This view is protected by login_required.
+    It automatically converts .HEIC files to .PNG format and caches the result in Redis.
     """
     wiki_file = get_object_or_404(WikiFile, pk=file_id)
     image_path = request.GET.get('path')
@@ -356,18 +361,27 @@ def view_image_in_archive(request, file_id):
     if '..' in image_path or image_path.startswith('/'):
         return HttpResponseBadRequest("Invalid image path.")
 
+    _root, image_ext = os.path.splitext(image_path)
+    is_heic = image_ext.lower() in ['.heic', '.heif']
+
+    if is_heic:
+        cache_key_source = f"heic-png:{wiki_file.id}:{image_path}".encode('utf-8')
+        cache_hash = hashlib.md5(cache_key_source).hexdigest()
+        
+        cached_png_bytes = cache.get(cache_hash)
+        if cached_png_bytes:
+            return HttpResponse(cached_png_bytes, content_type='image/png')
+
+    image_bytes = None
     archive_filename = wiki_file.file.name
     _, archive_ext = os.path.splitext(archive_filename.lower())
 
     try:
         with wiki_file.file.open('rb') as archive_file_obj:
-            image_bytes = None
-            
             if archive_ext == '.zip':
                 with zipfile.ZipFile(archive_file_obj, 'r') as zf:
                     if image_path in zf.namelist():
                         image_bytes = zf.read(image_path)
-                    
             elif archive_ext in ['.tar', '.gz', '.bz2', '.xz']:
                 with tarfile.open(fileobj=archive_file_obj, mode='r:*') as tf:
                     for member in tf.getmembers():
@@ -376,14 +390,41 @@ def view_image_in_archive(request, file_id):
                             if extracted_file:
                                 image_bytes = extracted_file.read()
                             break
-
-            if image_bytes:
-                content_type, _ = mimetypes.guess_type(image_path)
-                return HttpResponse(image_bytes, content_type=content_type or 'application/octet-stream')
-            else:
-                raise Http404(f"Image '{image_path}' not found in archive.")
-
     except (zipfile.BadZipFile, tarfile.TarError):
         raise Http404("Archive file is corrupted or invalid.")
     except Exception:
         raise Http404("Could not read image from archive.")
+
+    if not image_bytes:
+        raise Http404(f"Image '{image_path}' not found in archive.")
+
+    if is_heic:
+        tmp_heic_path = None
+        output_png_path = None
+        try:
+            with tempfile.NamedTemporaryFile(mode='wb', suffix='.heic', delete=False) as tmp_heic:
+                tmp_heic.write(image_bytes)
+                tmp_heic_path = tmp_heic.name
+
+            heic_img = HEIC2PNG(tmp_heic_path, quality=90)
+            
+            heic_img.save()
+
+            output_png_path = os.path.splitext(tmp_heic_path)[0] + '.png'
+
+            with open(output_png_path, 'rb') as png_file:
+                png_bytes = png_file.read()
+
+            cache.set(cache_hash, png_bytes, timeout=settings.HEIC_CACHE_DURATION)
+            
+            return HttpResponse(png_bytes, content_type='image/png')
+        except Exception as e:
+            raise Http404(f"Failed to convert HEIC image: {e}")
+        finally:
+            if tmp_heic_path and os.path.exists(tmp_heic_path):
+                os.remove(tmp_heic_path)
+            if output_png_path and os.path.exists(output_png_path):
+                os.remove(output_png_path)
+    else:
+        content_type, _ = mimetypes.guess_type(image_path)
+        return HttpResponse(image_bytes, content_type=content_type or 'application/octet-stream')

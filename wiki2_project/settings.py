@@ -129,6 +129,10 @@ CACHES = {
     }
 }
 
+# Custom setting for HEIC to PNG conversion cache duration
+# Default is 7 days (60 seconds * 60 minutes * 24 hours * 7 days)
+HEIC_CACHE_DURATION = os.environ.get('HEIC_CACHE_DURATION', 7 * 60 * 60 * 24)
+
 
 # INFO: Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

@@ -28,10 +28,6 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     libpq5 \
     netcat-openbsd \
-    texlive-latex-base \
-    texlive-fonts-recommended \
-    texlive-latex-extra \
-    texlive-fonts-extra \
     libpango-1.0-0 \
     libcairo2 \
     libgdk-pixbuf2.0-0 \
