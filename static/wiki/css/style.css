@@ -184,7 +184,7 @@ iframe {
 }
 
 .pdf-embed-container {
-  margin-bottom: 1em;
+  margin: 2rem 0;
   display: flex;
   justify-content: center;
 }
