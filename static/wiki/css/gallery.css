@@ -24,6 +24,8 @@
     transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
     cursor: zoom-in;    
     aspect-ratio: 1;
+    color: var(--wiki-button-danger-bg);
+    text-decoration-color: var(--wiki-button-danger-bg);
 
 }
 
@@ -40,6 +42,11 @@
     background-color: #e0e0e0;
     margin: 0;
 }
+
+.archive-gallery .gallery-item-link img:hover {
+    text-decoration: none;
+}
+
 
 body.lightbox-active {
     overflow: hidden;

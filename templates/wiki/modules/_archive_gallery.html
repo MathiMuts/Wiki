@@ -7,7 +7,7 @@
 <div class="archive-gallery">
     {% for image in images %}
         <a href="{{ image.url }}" class="gallery-item-link" data-title="{{ image.path|escape }}">
-            <img src="{{ image.url }}" alt="{{ alt_text }}" loading="lazy">
+            <img src="{{ image.url }}" alt="{{ image.name }}" loading="lazy">
         </a>
     {% endfor %}
 </div>

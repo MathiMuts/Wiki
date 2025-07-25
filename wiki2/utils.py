@@ -244,16 +244,14 @@ def markdown_image_replacer_factory(current_page=None):
                         cache.set(cache_key, image_list, timeout=3600)
                     
                     if image_list:
-                        # --- MODIFIED PART ---
-                        # Instead of building an HTML string, we prepare a context
-                        # and render a template component.
                         context = {
                             'images': [],
                             'alt_text': escaped_alt_text,
                         }
                         for image_path in image_list:
                             img_src_url = reverse('wiki:view_image_in_archive', args=[attached_file.id]) + f'?path={quote(image_path)}'
-                            context['images'].append({'url': img_src_url, 'path': image_path})
+                            img_name = os.path.basename(image_path)
+                            context['images'].append({'url': img_src_url, 'path': image_path, 'name': img_name})
                         
                         return render_to_string('wiki/modules/_archive_gallery.html', context)
                     else:
