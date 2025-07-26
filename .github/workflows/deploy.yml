@@ -25,6 +25,9 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
+            # Exit immediately if a command exits with a non-zero status.
+            set -e
+
             # Navigate to the project directory
             cd ${{ secrets.PROJECT_PATH }}
             
@@ -32,24 +35,20 @@ jobs:
             echo ">> Pulling latest code..."
             git pull origin main
             
-            # --- NEW PERMISSIONS SECTION ---
+            # --- PERMISSIONS SECTION ---
             echo ">> Setting correct file permissions..."
-            # Change ownership to www-data. The deploy-user needs sudo for this.
             sudo chown -R www-data:www-data .
-            # Set directory and file permissions
             sudo find . -type d -exec chmod 775 {} \;
             sudo find . -type f -exec chmod 664 {} \;
-            # Make scripts executable
             sudo chmod +x manage.py
             sudo chmod +x *.sh
-            # --- END PERMISSIONS SECTION ---
             
             # Rebuild and restart the services
             echo ">> Rebuilding and deploying containers..."
             docker compose down
             docker compose build --no-cache
-            docker compose up -d
+            docker compose up -d --remove-orphans
             
-            # Optional: Prune old images to save disk space
+            # Prune old images to save disk space
             echo ">> Pruning old Docker images..."
             docker image prune -f
