@@ -33,7 +33,8 @@ jobs:
             
             # Pull the latest changes from the git repository
             echo ">> Pulling latest code..."
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
             
             # --- PERMISSIONS SECTION ---
             echo ">> Setting correct file permissions..."
