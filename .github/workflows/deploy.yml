@@ -12,18 +12,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Install SSH Key
-        uses: shimataro/ssh-key-action@v2
-        with:
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          known_hosts: 'just-a-placeholder-so-we-can-disable-strict-host-key-checking'
-
+      - name: Add Server to Known Hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+      
       - name: Deploy via SSH
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
           script: |
             # Navigate to the project directory
             cd ${{ secrets.PROJECT_PATH }}
@@ -33,6 +33,7 @@ jobs:
             git pull origin main
             
             # Rebuild and restart the services
+            # No 'sudo' is needed because 'deploy-user' is in the 'docker' group
             echo ">> Rebuilding and deploying containers..."
             docker-compose down
             docker-compose build --no-cache
