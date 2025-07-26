@@ -1,0 +1,43 @@
+# .github/workflows/deploy.yml
+
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install SSH Key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          known_hosts: 'just-a-placeholder-so-we-can-disable-strict-host-key-checking'
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Navigate to the project directory
+            cd ${{ secrets.PROJECT_PATH }}
+            
+            # Pull the latest changes from the git repository
+            echo ">> Pulling latest code..."
+            git pull origin main
+            
+            # Rebuild and restart the services
+            echo ">> Rebuilding and deploying containers..."
+            docker-compose down
+            docker-compose build --no-cache
+            docker-compose up -d
+            
+            # Optional: Prune old images to save disk space
+            echo ">> Pruning old Docker images..."
+            docker image prune -f
