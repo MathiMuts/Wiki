@@ -1,0 +1,44 @@
+{% extends "wiki/modules/_base.html" %}
+
+{% block title %}Log In{% endblock %}
+
+{% block content %}
+<div class="form-section" style="max-width: 500px; margin: 2rem auto;">
+    <h2 style="text-align: center; margin-bottom: 2rem;">Log In to Your Account</h2>
+
+    <form method="post">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+            <div class="messages">
+                {% for error in form.non_field_errors %}
+                    <li class="error">{{ error }}</li>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="form-group">
+            <label for="{{ form.username.id_for_label }}">Username</label>
+            <input type="text" name="{{ form.username.name }}" id="{{ form.username.id_for_label }}" class="wiki-input-styled" required>
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.password.id_for_label }}">Password</label>
+            <input type="password" name="{{ form.password.name }}" id="{{ form.password.id_for_label }}" class="wiki-input-styled" required>
+        </div>
+
+        <div class="actions" style="margin-top: 1.5rem;">
+            <button type="submit" class="button-styled button-create" style="width: 100%; padding: 15px; font-size: 1.1em;">Log In</button>
+        </div>
+
+        <div style="text-align: center; margin-top: 1.5rem;">
+            <a href="{% url 'password_reset' %}" class="file-link">Forgot password?</a>
+        </div>
+    </form>
+</div>
+
+<div style="text-align: center; margin-top: 2rem;">
+    <p class="secondary-text">Don't have an account? <a href="#" class="file-link">Sign Up</a></p>
+</div>
+
+{% endblock %}

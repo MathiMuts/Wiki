@@ -16,9 +16,13 @@
              " alt="User Avatar">
         </div>
         <div class="actions-tray" id="actions-tray-{{ view.unique_id|default:'1' }}" role="menu">
-            <a href="{% url 'wiki:logout' %}?next={{request.path}}" class="action-icon" role="menuitem" aria-label="Log Out">
-                <img src="{% static 'wiki/icons/exit.svg'%}" alt="Log Out">
-            </a>
+            <form action="{% url 'logout' %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="action-icon" role="menuitem" aria-label="Log Out" style="border: none; background-color: rgba(0, 0, 0, 0); cursor: pointer;">
+                    <img src="{% static 'wiki/icons/exit.svg'%}" alt="Log Out">
+                </button>
+            </form>
             <a href="{% url 'wiki:profile' %}" class="action-icon" role="menuitem" aria-label="View Profile">
                 <img src="{% static 'wiki/icons/user.svg'%}" alt="User Profile">
             </a>
@@ -31,7 +35,7 @@
     </div>
 {% else %}
     <div class="profile-widget" data-widget-type="link">
-        <a href="{% url 'wiki:login' %}?next={{request.path}}" class="avatar-display login-link" aria-label="Log In">
+        <a href="{% url 'login' %}?next={{request.path}}" class="avatar-display login-link" aria-label="Log In">
             <img src="{% static 'wiki/icons/login.png'%}" alt="Log In Icon">
         </a>
     </div>

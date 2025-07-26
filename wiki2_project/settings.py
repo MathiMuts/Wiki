@@ -31,8 +31,8 @@ ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STRING.split(',') if hos
 if not ALLOWED_HOSTS:
     ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '10.1.1.224']
 
-LOGIN_URL="wiki:login"
-LOGOUT_URL="wiki:logout"
+LOGIN_URL="login"
+LOGOUT_URL="logout"
 LOGIN_REDIRECT_URL="wiki:wiki"
 LOGOUT_REDIRECT_URL="wiki:wiki"
 
@@ -156,6 +156,14 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# INFO: Email settings
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True # For secure connection
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # INFO:Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
