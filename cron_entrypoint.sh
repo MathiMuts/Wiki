@@ -1,7 +1,8 @@
 #!/bin/sh
 set -e
 
-# --- Determine Cron Schedule ---
+echo "cron_entrypoint.sh: Starting cron daemon..."
+
 CRON_SCHEDULE_INPUT="${BACKUP_TIME:-03:00}"
 FINAL_CRON_SCHEDULE=""
 
@@ -18,23 +19,15 @@ fi
 
 echo "cron_entrypoint.sh: Configuring cron job with schedule: '${FINAL_CRON_SCHEDULE}'"
 
-# --- Setup Cron Job ---
 CRON_JOB_COMMAND="/app/run_backup_job.sh"
 CRONTAB_LINE="${FINAL_CRON_SCHEDULE} ${CRON_JOB_COMMAND} >> /proc/1/fd/1 2>> /proc/1/fd/2"
 
 echo "${CRONTAB_LINE}" > /tmp/new_root_cron
-echo "" >> /tmp/new_root_cron # Ensure final newline
+echo "" >> /tmp/new_root_cron
 
 crontab -u root /tmp/new_root_cron
 rm /tmp/new_root_cron
 
-# Optional: Verify crontab content during initial setup or debugging
-# echo "--- cron_entrypoint.sh: Root's crontab content after install: ---"
-# crontab -u root -l
-# echo "-----------------------------------------------------------------"
+echo "cron_entrypoint.sh: Cron deamon ready."
 
-# --- Start Cron Daemon ---
-echo "cron_entrypoint.sh: Starting cron daemon..."
-# -L 8 is a reasonable log level for cron itself in production.
-# Use -L 15 for deep debugging if issues arise.
 exec cron -f -L 8
