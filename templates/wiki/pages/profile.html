@@ -3,5 +3,130 @@
 {% block title%}Profile - {user.username}{% endblock %}
 {% load static %}
 {% block content %}
-{{ user.username }}
+<style>
+    /* Additional styles for profile page layout */
+    .profile-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .profile-pfp {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-bottom: 1rem;
+        box-shadow: 0px 10px 30px 0px rgba(0, 0, 0, 0.1);
+        border: 4px solid var(--background-color);
+    }
+    .profile-username {
+        font-size: 2.5rem;
+        font-weight: 900;
+        margin-bottom: 0.5rem;
+    }
+    .form-section {
+        padding: 2rem;
+        border-radius: 20px;
+        margin-bottom: 2rem;
+    }
+    .form-section h2 {
+        margin-top: 0;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--wiki-border-primary);
+    }
+    .read-only-field {
+        background-color: #e9ecef;
+        opacity: 1;
+        cursor: not-allowed;
+    }
+</style>
+
+<!-- The form must have enctype for file uploads -->
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    
+    <div class="profile-header">
+        <img class="profile-pfp" src="{{ user.profile.pfp.url }}" alt="Profile picture for {{ user.username }}">
+        <h1 class="profile-username">{{ user.username }}</h1>
+        <p class="secondary-text">Member since {{ user.date_joined|date:"F j, Y" }}</p>
+    </div>
+
+    <!-- Personal Info & PFP Section -->
+    <div class="form-section">
+        <h2>Personal Information</h2>
+        
+        <div class="form-group">
+            <label for="id_username">Username</label>
+            <input type="text" id="id_username" value="{{ user.username }}" class="wiki-input-styled read-only-field" readonly>
+            <small class="form-text-muted">Username cannot be changed.</small>
+        </div>
+
+        <div class="form-row-responsive">
+            <div class="form-group-responsive form-group">
+                <label for="{{ u_form.first_name.id_for_label }}">First Name</label>
+                {{ u_form.first_name }}
+            </div>
+            <div class="form-group-responsive form-group">
+                <label for="{{ u_form.last_name.id_for_label }}">Last Name</label>
+                {{ u_form.last_name }}
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="{{ u_form.email.id_for_label }}">Email Address</label>
+            {{ u_form.email }}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ p_form.pfp.id_for_label }}">{{ p_form.pfp.label }}</label>
+            {{ p_form.pfp }}
+            {% comment %} <small class="form-text-muted">Current: {{ user.profile.pfp.name|slice:"13:" }}</small> {% endcomment %}
+        </div>
+    </div>
+
+    <!-- Security & Dates Section -->
+    <div class="form-section">
+        <h2>Account Details</h2>
+        <div class="form-group">
+            <label>Password</label>
+            <p class="form-text-muted" style="margin-top: 0;">Raw passwords are not stored. Click below to change your password.</p>
+            <a href="{% url 'password_reset' %}" class="button-styled button-warn">Reset Password</a>
+        </div>
+        <hr>
+        <div class="form-group">
+            <label>Last Login</label>
+            <input type="text" value="{{ user.last_login|date:'F j, Y, P' }}" class="wiki-input-styled read-only-field" readonly>
+        </div>
+    </div>
+
+    <!-- Permissions Section for Staff Only -->
+    {% if user.is_staff %}
+    <div class="form-section">
+        <h2>Admin Permissions</h2>
+        <div class="form-row-responsive">
+            <div class="form-group-responsive">
+                <label>Active Status</label>
+                <input type="text" value="{{ user.is_active|yesno:'Active,Inactive' }}" class="wiki-input-styled read-only-field" readonly>
+            </div>
+            <div class="form-group-responsive">
+                <label>Staff Status</label>
+                <input type="text" value="{{ user.is_staff|yesno:'Yes,No' }}" class="wiki-input-styled read-only-field" readonly>
+            </div>
+            <div class="form-group-responsive">
+                <label>Superuser Status</label>
+                <input type="text" value="{{ user.is_superuser|yesno:'Yes,No' }}" class="wiki-input-styled read-only-field" readonly>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Submit Button -->
+    <div class="actions" style="text-align: right;">
+        <button type="submit" class="button-styled button-create" style="padding: 15px 30px; font-size: 1.1em;">Save Changes</button>
+    </div>
+
+</form>
 {% endblock %}

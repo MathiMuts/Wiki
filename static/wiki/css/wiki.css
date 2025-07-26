@@ -131,10 +131,12 @@ input[type="file"]::file-selector-button {
 textarea,
 #wiki-content form .form-group input[type="text"],
 #wiki-content form .form-group-responsive input[type="text"],
+#wiki-content form .form-group input[type="Email"],
+#wiki-content form .form-group-responsive input[type="Email"],
 #wiki-content form .form-group select,
 .wiki-input-styled {
     width: 100%; 
-    box-sizing: border-box; 
+    box-sizing: border-box;
     padding: 1.5rem;
     border-radius: 16px; 
     font-size: 1em;

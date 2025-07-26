@@ -1,6 +1,7 @@
 # wiki/forms.py
 from django import forms
-from .models import WikiPage, WikiFile
+from .models import WikiPage, WikiFile, Profile
+from django.contrib.auth.models import User
 from django.utils.text import slugify
 
 class WikiPageForm(forms.ModelForm):
@@ -60,4 +61,27 @@ class WikiFileForm(forms.ModelForm):
         }
         help_texts = {
             'filename_slug': 'This name (without extension) will be used for display. It will be auto-generated. This is also the name used to refrence this file in the wiki.'
+        }
+
+class UserUpdateForm(forms.ModelForm):
+    email = forms.EmailField()
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email']
+        widgets = {
+            'first_name': forms.TextInput(attrs={'class': 'wiki-input-styled'}),
+            'last_name': forms.TextInput(attrs={'class': 'wiki-input-styled'}),
+            'email': forms.EmailInput(attrs={'class': 'wiki-input-styled'}),
+        }
+
+class ProfileUpdateForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+        fields = ['pfp']
+        labels = {
+            'pfp': 'Change Profile Picture'
+        }
+        widgets = {
+            'pfp': forms.ClearableFileInput(attrs={'class': 'wiki-input-styled'}),
         }

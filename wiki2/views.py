@@ -11,7 +11,7 @@ from . import constants
 from requests import post
 from urllib.parse import urlencode
 from .models import WikiPage, WikiFile
-from .forms import WikiPageForm, WikiFileForm
+from .forms import WikiPageForm, WikiFileForm, UserUpdateForm, ProfileUpdateForm
 
 from django.conf import settings
 from django.urls import reverse
@@ -24,6 +24,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.contrib import messages
 from django.core.cache import cache
+
 from heic2png import HEIC2PNG # INFO: ERROR IS EEN LEUGEN
 
 def login_view(request):
@@ -68,7 +69,27 @@ def logout_view(request):
 
 @login_required
 def profile(request):
-    return render(request, 'wiki/pages/profile.html', {'user': request.user})
+    if request.method == 'POST':
+        u_form = UserUpdateForm(request.POST, instance=request.user)
+        p_form = ProfileUpdateForm(request.POST, request.FILES, instance=request.user.profile)
+
+        if u_form.is_valid() and p_form.is_valid():
+            u_form.save()
+            p_form.save()
+            messages.success(request, f'Your account has been updated!')
+            return redirect('wiki:profile')
+
+    else:
+        u_form = UserUpdateForm(instance=request.user)
+        p_form = ProfileUpdateForm(instance=request.user.profile)
+
+    context = {
+        'user': request.user,
+        'u_form': u_form,
+        'p_form': p_form
+    }
+
+    return render(request, 'wiki/pages/profile.html', context)
 
 @login_required
 def search(request):
