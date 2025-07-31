@@ -1,8 +1,9 @@
-# wiki/context_processors.py
+# wiki2/context_processors.py
 import json
-from django.urls import reverse, NoReverseMatch
-from .models import WikiPage
 import re
+from django.urls import reverse, NoReverseMatch
+from django.core.cache import cache
+from .models import WikiPage
 from . import constants
 
 
@@ -143,67 +144,53 @@ def _parse_menu_data(menu_raw_content, source_page_slug="menu"):
 
     return parsed_sections
 
-
 def wiki_menu(request):
-    menu_config_content = None
     menu_page_slug_val = constants.MENU_CONFIG_PAGE_SLUG
-    menu_page_title = menu_page_slug_val.replace('-', ' ').title()
-
+    
     try:
-        menu_config_page = WikiPage.objects.get(slug=menu_page_slug_val)
-        menu_config_content = menu_config_page.content
+        menu_config_page = WikiPage.objects.only('content', 'updated_at').get(slug=menu_page_slug_val)
+        cache_key = f"wiki_menu_{menu_page_slug_val}_{menu_config_page.updated_at.timestamp()}"
     except WikiPage.DoesNotExist:
-        try:
+        menu_config_page = None
+        cache_key = f"wiki_menu_{menu_page_slug_val}_default"
+
+    cached_menu = cache.get(cache_key)
+    if cached_menu:
+        custom_menu_sections = cached_menu
+    else:
+        if menu_config_page:
+            menu_config_content = menu_config_page.content
+        else:
+            menu_page_title = menu_page_slug_val.replace('-', ' ').title()
             new_menu_page, created = WikiPage.objects.get_or_create(
                 slug=menu_page_slug_val,
                 defaults={'title': menu_page_title, 'content': constants.DEFAULT_MENU_CONFIG}
             )
             menu_config_content = new_menu_page.content
-        except Exception:
-            menu_config_content = constants.DEFAULT_MENU_CONFIG
-    except WikiPage.MultipleObjectsReturned:
-        menu_config_page = WikiPage.objects.filter(slug=menu_page_slug_val).order_by('id').first()
-        menu_config_content = menu_config_page.content if menu_config_page else constants.DEFAULT_MENU_CONFIG
-    except Exception:
-        menu_config_content = constants.DEFAULT_MENU_CONFIG
 
-    if menu_config_content is None:
-        menu_config_content = constants.DEFAULT_MENU_CONFIG
-
-    custom_menu_sections = _parse_menu_data(menu_config_content, source_page_slug=menu_page_slug_val)
-
-    if not custom_menu_sections:
-        custom_menu_sections = _parse_menu_data(constants.DEFAULT_MENU_CONFIG, source_page_slug="DEFAULT_MENU_CONFIG_fallback")
+        custom_menu_sections = _parse_menu_data(menu_config_content, source_page_slug=menu_page_slug_val)
+        
         if not custom_menu_sections:
             try:
-                menu_config_page_url_for_error = reverse('wiki:wiki_page', kwargs={'slug': menu_page_slug_val})
-            except Exception:
-                 menu_config_page_url_for_error = f"/wiki/{menu_page_slug_val}/"
-            custom_menu_sections = [
-                {
+                menu_config_page_url = reverse('wiki:wiki_page', kwargs={'slug': menu_page_slug_val})
+                custom_menu_sections = [{
                     "title": "Menu Config Error",
-                    "items": [{"text": "Check menu config.", "url": menu_config_page_url_for_error, "slug": menu_page_slug_val, "circle_color": "red"}],
-                    "title_color": "red",
-                    "section_url": menu_config_page_url_for_error,
-                    "section_is_external": False
-                }
-            ]
-
-    all_pages_for_search = []
-    try:
-        pages = WikiPage.objects.all().values('title', 'slug')
-        for page in pages:
-            try:
-                page_url = reverse('wiki:wiki_page', kwargs={'slug': page['slug']})
-                all_pages_for_search.append({
-                    "title": page['title'],
-                    "slug": page['slug'],
-                    "url": page_url
-                })
+                    "items": [{"text": "Check menu config.", "url": menu_config_page_url, "circle_color": "red"}],
+                }]
             except NoReverseMatch:
-                pass
-    except Exception:
-        pass
+                custom_menu_sections = []
+
+        cache.set(cache_key, custom_menu_sections, timeout=3600)
+
+    all_pages_cache_key = 'all_wiki_pages_for_search'
+    all_pages_for_search = cache.get(all_pages_cache_key)
+    if not all_pages_for_search:
+        pages = WikiPage.objects.all().values('title', 'slug')
+        all_pages_for_search = [
+            {"title": p['title'], "url": reverse('wiki:wiki_page', kwargs={'slug': p['slug']})}
+            for p in pages
+        ]
+        cache.set(all_pages_cache_key, all_pages_for_search, timeout=600)
 
     return {
         "custom_wiki_menu_sections": custom_menu_sections,

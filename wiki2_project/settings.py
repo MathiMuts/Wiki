@@ -117,22 +117,31 @@ DATABASES = {
         'PORT': DB_PORT,
     }
 }
-
-
-# INFO: Cache (Redis)
-# https://docs.djangoproject.com/en/5.2/topics/cache/
-REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
-REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
-
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/1", # DB 1 for cache
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+# INFO: Cache
+if DEBUG:
+    # RAM cache
+    # A simple in-memory cache.
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "wiki-dev-cache-RAM",  # A unique name for the in-memory cache instance
         }
     }
-}
+else:
+    # Redis cache
+    # https://docs.djangoproject.com/en/5.2/topics/cache/
+    REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+    REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
+
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/1", # DB 1 for cache
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            }
+        }
+    }
 
 # Custom setting for HEIC to PNG conversion cache duration
 # Default is 7 days (60 seconds * 60 minutes * 24 hours * 7 days)
@@ -249,9 +258,10 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # The values from your .env file should be updated accordingly.
 
 # If you are using HTTPS, also consider:
-SECURE_SSL_REDIRECT = True # If all traffic should be HTTPS
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+if DEBUG == False:
+    SECURE_SSL_REDIRECT = True # If all traffic should be HTTPS
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 # INFO: For <iframe> tags (to render PDFs)
 # By default, Django sets this to 'DENY'.
