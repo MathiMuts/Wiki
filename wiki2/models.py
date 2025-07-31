@@ -1,4 +1,4 @@
-# wiki/models.py
+# wiki2/models.py
 import os
 import shutil
 from django.db import models
@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils.text import slugify
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.db.models import Q
 
 
 class Profile(models.Model):
@@ -15,6 +16,9 @@ class Profile(models.Model):
     def __str__(self):
         return f'{self.user.username} Profile'
 
+class WikiPageManager(models.Manager):
+    def find_by_title_or_slug(self, term):
+        return self.filter(Q(title__iexact=term) | Q(slug=slugify(term))).first()
 
 class WikiPage(models.Model):
     title = models.CharField(max_length=200, unique=True)
@@ -30,6 +34,8 @@ class WikiPage(models.Model):
         related_name='wiki_pages_modified',
         help_text="User who last modified the page."
     )
+    
+    objects = WikiPageManager()
 
     def __str__(self):
         return self.title
@@ -37,6 +43,7 @@ class WikiPage(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.title)
+        
         original_slug = self.slug
         counter = 1
         queryset = WikiPage.objects.filter(slug=self.slug)
@@ -52,19 +59,6 @@ class WikiPage(models.Model):
 
         super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs):
-        page_media_dir = self.get_media_directory_path()
-
-        super().delete(*args, **kwargs)
-
-        if page_media_dir and os.path.exists(page_media_dir) and os.path.isdir(page_media_dir):
-            try:
-                if not os.listdir(page_media_dir):
-                    os.rmdir(page_media_dir)
-                else:
-                    shutil.rmtree(page_media_dir)
-            except OSError as e:
-                pass
 
     def get_absolute_url(self):
         return reverse('wiki:wiki_page', kwargs={'slug': self.slug})
@@ -73,6 +67,7 @@ class WikiPage(models.Model):
         if not self.slug:
             return None
         return os.path.join(settings.MEDIA_ROOT, 'wiki_files', self.slug)
+
 
 def wiki_page_file_path(instance, filename):
     page_slug = instance.page.slug if instance.page else 'unknown_page'
@@ -85,8 +80,8 @@ def wiki_page_file_path(instance, filename):
         final_filename_slug = slugify(temp_slug_base) if temp_slug_base and slugify(temp_slug_base) else 'uploaded-file'
 
     new_filename = f"{final_filename_slug}{original_ext}"
-
     return f'wiki_files/{page_slug}/{new_filename}'
+
 
 class WikiFile(models.Model):
     page = models.ForeignKey(WikiPage, related_name='files', on_delete=models.CASCADE)
@@ -115,18 +110,4 @@ class WikiFile(models.Model):
         if self.file and not self.filename_slug:
             name_part, _ = os.path.splitext(os.path.basename(self.file.name))
             self.filename_slug = slugify(name_part) if name_part and slugify(name_part) else 'file'
-
         super().save(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        file_path_to_delete = None
-        if self.file and hasattr(self.file, 'path') and self.file.path:
-            file_path_to_delete = self.file.path
-
-        super().delete(*args, **kwargs)
-
-        if file_path_to_delete and os.path.isfile(file_path_to_delete):
-            try:
-                os.remove(file_path_to_delete)
-            except OSError:
-                pass
