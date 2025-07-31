@@ -7,23 +7,23 @@
     <form method="post" id="wikiPageForm" action=""> 
         {% csrf_token %}
 
-        <div style="display: flex; flex: row; justify-content: space-between;" class="visibility-choice">
+        <div class="visibility-choice">
             <div>
-            <h1>{{ action }} Wiki Page{% if page %}: <strong class="page-meta">{{ page.title }}</strong>{% endif %}</h1>
-            <div class="page-meta" style="margin-bottom: 0;">
-                Created: {{ page.created_at|date:"F d, Y, P" }} <br>
-                Last updated: {{ page.updated_at|date:"F d, Y, P" }}
-                {% if page.last_modified_by %}
-                    by <strong>{{ page.last_modified_by.username }}</strong>
-                {% else %}
-                    (modifier unknown)
-                {% endif %} <br>
+                <h1>{{ action }} Wiki Page{% if page %}: <strong class="page-meta">{{ page.title }}</strong>{% endif %}</h1>
+                <div class="page-meta" style="margin-bottom: 0;">
+                    Created: {{ page.created_at|date:"F d, Y, P" }} <br>
+                    Last updated: {{ page.updated_at|date:"F d, Y, P" }}
+                    {% if page.last_modified_by %}
+                        by <strong>{{ page.last_modified_by.username }}</strong>
+                    {% else %}
+                        (modifier unknown)
+                    {% endif %} <br>
+                </div>
             </div>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 0.4rem;">
-            {% for radio in form.visibility %}
-                <span style="margin-bottom: 4px; display: flex; gap: 0.4rem;">{{ radio.tag }} {{ radio.choice_label }}</span>
-            {% endfor %}
+            <div style="" class="visibility-list">
+                {% for radio in form.visibility %}
+                    <span style="margin-bottom: 4px; display: flex; gap: 0.4rem;">{{ radio.tag }} {{ radio.choice_label }}</span>
+                {% endfor %}
             </div>
         </div>
 

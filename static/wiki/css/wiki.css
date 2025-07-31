@@ -310,6 +310,29 @@ input[type="file"]::file-selector-button {
     background-color: var(--card-color);
 }
 
+.visibility-choice {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+.visibility-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+@media (max-width: 768px) { 
+    .visibility-choice {
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .visibility-list {
+        flex-direction: row;
+        gap: 2rem;
+        margin-bottom: 1rem;
+    }
+}
+
 .visibility-choice input[type="radio"] {
     -webkit-appearance: none;
     appearance: none;
@@ -318,7 +341,6 @@ input[type="file"]::file-selector-button {
 }
 
 .visibility-choice input[type="radio"] {
-    background-color: var(--background-secondary, #fff);
     font: inherit;
     color: var(--text-secondary, #6c757d);
     width: 1.25rem;
