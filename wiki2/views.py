@@ -18,7 +18,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import redirect_to_login
 from django.contrib import messages
 from django.core.cache import cache
-from django.template.defaultfilters import slugify
+from django.utils.text import slugify
 from urllib.parse import urlencode
 
 def get_visible_pages(user):
@@ -50,7 +50,7 @@ def profile(request):
     context = {'u_form': u_form, 'p_form': p_form}
     return render(request, 'wiki/pages/profile.html', context)
 
-# WARNING: Should have decorator?
+
 def search(request):
     query = request.GET.get('q', '').strip()
     if not query:
@@ -220,22 +220,37 @@ def page_delete_file(request, slug, file_id):
     file_to_delete.delete()
     return JsonResponse({'status': 'success', 'message': f"File '{filename}' deleted successfully."})
 
-@login_required
 def page_download_file(request, slug, file_id):
     wiki_file = get_object_or_404(WikiFile, id=file_id, page__slug=slug)
+    page = wiki_file.page
+
+    if not WikiPage.objects.get_visible_by_user(request.user).filter(pk=page.pk).exists():
+        if page.visibility != WikiPage.Visibility.PUBLIC and not request.user.is_authenticated:
+            return redirect_to_login(request.get_full_path())
+        raise Http404("You do not have permission to access this file.")
+
     file_path = wiki_file.file.path
     if not os.path.exists(file_path):
-        raise Http404("File does not exist.")
+        raise Http404("File does not exist on the server.")
 
     mime_type, _ = mimetypes.guess_type(file_path)
-    response = HttpResponse(wiki_file.file.read(), content_type=mime_type or 'application/octet-stream')
-    response['Content-Disposition'] = f'attachment; filename="{wiki_file.filename_display}"'
-    return response
+    try:
+        response = HttpResponse(wiki_file.file.read(), content_type=mime_type or 'application/octet-stream')
+        response['Content-Disposition'] = f'attachment; filename="{wiki_file.filename_display}"'
+        return response
+    except IOError:
+        raise Http404("Error reading file.")
 
 
-@login_required
 def view_image_in_archive(request, file_id):
     wiki_file = get_object_or_404(WikiFile, pk=file_id)
+    page = wiki_file.page
+
+    if not WikiPage.objects.get_visible_by_user(request.user).filter(pk=page.pk).exists():
+        if page.visibility != WikiPage.Visibility.PUBLIC and not request.user.is_authenticated:
+            return redirect_to_login(request.get_full_path())
+        raise Http404("You do not have permission to view this image.")
+
     image_path = request.GET.get('path')
 
     if not image_path or '..' in image_path or image_path.startswith('/'):

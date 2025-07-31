@@ -18,6 +18,21 @@ class Profile(models.Model):
 class WikiPageManager(models.Manager):
     def find_by_title_or_slug(self, term):
         return self.filter(Q(title__iexact=term) | Q(slug=slugify(term))).first()
+    
+    def get_visible_by_user(self, user):
+        WikiPage = self.model 
+
+        if not user or not user.is_authenticated:
+            return self.filter(visibility=WikiPage.Visibility.PUBLIC)
+
+        if user.is_staff:
+            return self.all()
+
+        return self.filter(
+            Q(visibility=WikiPage.Visibility.PUBLIC) |
+            Q(visibility=WikiPage.Visibility.LOGGED_IN) |
+            (Q(visibility=WikiPage.Visibility.PRIVATE) & Q(author=user))
+        )
 
 class WikiPage(models.Model):
     
