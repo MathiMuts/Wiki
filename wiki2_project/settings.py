@@ -249,9 +249,10 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # The values from your .env file should be updated accordingly.
 
 # If you are using HTTPS, also consider:
-SECURE_SSL_REDIRECT = True # If all traffic should be HTTPS
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+if DEBUG == False:
+    SECURE_SSL_REDIRECT = True # If all traffic should be HTTPS
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 # INFO: For <iframe> tags (to render PDFs)
 # By default, Django sets this to 'DENY'.
