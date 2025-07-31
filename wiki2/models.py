@@ -1,6 +1,5 @@
 # wiki2/models.py
 import os
-import shutil
 from django.db import models
 from django.urls import reverse
 from django.utils.text import slugify
@@ -19,13 +18,42 @@ class Profile(models.Model):
 class WikiPageManager(models.Manager):
     def find_by_title_or_slug(self, term):
         return self.filter(Q(title__iexact=term) | Q(slug=slugify(term))).first()
+    
+    def get_visible_by_user(self, user):
+        WikiPage = self.model 
+
+        if not user or not user.is_authenticated:
+            return self.filter(visibility=WikiPage.Visibility.PUBLIC)
+
+        if user.is_staff:
+            return self.all()
+
+        return self.filter(
+            Q(visibility=WikiPage.Visibility.PUBLIC) |
+            Q(visibility=WikiPage.Visibility.LOGGED_IN) |
+            (Q(visibility=WikiPage.Visibility.PRIVATE) & Q(author=user))
+        )
 
 class WikiPage(models.Model):
+    
+    class Visibility(models.TextChoices):
+        LOGGED_IN = 'LOGGED_IN', 'Logged-In'
+        PRIVATE = 'PRIVATE', 'Private'
+        PUBLIC = 'PUBLIC', 'Public'
+
     title = models.CharField(max_length=200, unique=True)
     slug = models.SlugField(max_length=200, unique=True, blank=True, help_text="Leave blank to auto-generate from title.")
     content = models.TextField(blank=True, help_text="Write your content in Markdown.")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='owned_wiki_pages',
+        help_text="The owner of this page. Only used for 'Private' pages."
+    )
     last_modified_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -34,7 +62,13 @@ class WikiPage(models.Model):
         related_name='wiki_pages_modified',
         help_text="User who last modified the page."
     )
-    
+    visibility = models.CharField(
+        max_length=10,
+        choices=Visibility.choices,
+        default=Visibility.LOGGED_IN,
+        help_text="Control who can view this page."
+    )
+
     objects = WikiPageManager()
 
     def __str__(self):
@@ -56,6 +90,11 @@ class WikiPage(models.Model):
             queryset = WikiPage.objects.filter(slug=self.slug)
             if self.pk:
                 queryset = queryset.exclude(pk=self.pk)
+
+        if self.visibility == self.Visibility.PRIVATE:
+            self.author = self.last_modified_by
+        elif self.visibility != self.Visibility.PRIVATE:
+            self.author = None
 
         super().save(*args, **kwargs)
 

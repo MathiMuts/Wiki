@@ -7,7 +7,7 @@ from django.utils.text import slugify
 class WikiPageForm(forms.ModelForm):
     class Meta:
         model = WikiPage
-        fields = ['title', 'slug', 'content']
+        fields = ['title', 'slug', 'content', 'visibility']
         widgets = {
             'title': forms.TextInput(attrs={
                 'id': 'wiki-form-title-input',
@@ -27,6 +27,9 @@ class WikiPageForm(forms.ModelForm):
                 'cols': 80,
                 'class': 'form-control markdown-editor-area input',
                 'autocomplete': 'off',
+            }),
+            'visibility': forms.RadioSelect(attrs={
+                'class': 'visibility-radio-select'
             }),
         }
         help_texts = {
