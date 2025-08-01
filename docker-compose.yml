@@ -43,6 +43,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - default
+      - monitoring_network
     restart: unless-stopped
 
   nginx:
@@ -83,3 +86,7 @@ volumes:
   redis_data:
   static_volume:
   media_volume:
+
+networks:
+  monitoring_network:
+    external: true
