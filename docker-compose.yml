@@ -43,9 +43,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    networks:
-      - default
-      - monitoring_network
     restart: unless-stopped
 
   nginx:
@@ -62,6 +59,9 @@ services:
     depends_on:
       - web
     restart: unless-stopped
+    networks:
+      - default
+      - monitoring_network
 
   backups:
     build: .
