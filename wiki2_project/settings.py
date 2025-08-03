@@ -117,6 +117,7 @@ DATABASES = {
         'PORT': DB_PORT,
     }
 }
+
 # INFO: Cache
 if DEBUG:
     # RAM cache
