@@ -35,3 +35,5 @@ db.sqlite3
 # Files managed by Docker build stages
 # pyproject.toml # Copied in builder stage
 # uv.lock        # Copied in builder stage
+
+backups/
