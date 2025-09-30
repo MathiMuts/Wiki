@@ -4,9 +4,7 @@ set -e
 
 echo "Entrypoint script started as user: $(whoami)"
 
-echo "Creating environment file for cron jobs..."
-
-# --- Wait for services, run migrations etc. (can still be root or drop privs early for these) ---
+# Wait for the database to be ready
 if [ -n "$DB_HOST" ] && [ -n "$DB_PORT" ]; then
     echo "Waiting for PostgreSQL at $DB_HOST:$DB_PORT..."
     while ! nc -z $DB_HOST $DB_PORT; do
@@ -15,13 +13,19 @@ if [ -n "$DB_HOST" ] && [ -n "$DB_PORT" ]; then
     echo "PostgreSQL started"
 fi
 
-# --- NOTE: This part runs as non-root ---
-echo "Applying database migrations..."
-python manage.py migrate --noinput
+# Set ownership of volume mounts to the app user
+# This is the key fix for the PermissionError
+echo "Setting ownership for static and media files..."
+chown -R appuser:appuser /app/staticfiles /app/media
 
-echo "Collecting static files..."
-python manage.py collectstatic --noinput --clear
- 
-echo "Starting application server..."
-exec "$@"
-```
+# It's good practice to run migrations and other management commands as the app user too.
+# We use gosu to temporarily become 'appuser' for a single command.
+echo "Applying database migrations as appuser..."
+gosu appuser python manage.py migrate --noinput
+
+echo "Collecting static files as appuser..."
+gosu appuser python manage.py collectstatic --noinput --clear
+
+echo "Starting application server as appuser..."
+# Use gosu to drop privileges and execute the main process
+exec gosu appuser "$@"
