@@ -34,7 +34,10 @@ DB_PORT=5432 # Default PostgreSQL port inside the container network
 REDIS_HOST=redis # This is the service name from docker-compose.yml
 REDIS_PORT=6379 # Default Redis port inside the container network
 ```
-
+## Make backups
+`cd /app && /usr/local/bin/python manage.py create_wiki_backup --output-dir /app/backups`
+## Prune backups
+`cd /app && /usr/local/bin/python manage.py prune_backups --backup-dir /app/backups`
 ## Restore backup
 To revert to a backup, first we need to enter the container:
 `docker exec -it web bash`

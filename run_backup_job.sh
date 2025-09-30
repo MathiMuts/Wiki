@@ -10,7 +10,7 @@ log_message "Backup job started."
 
 # --- 1. Execute Backup Command ---
 log_message "Running Django create_wiki_backup command..."
-COMMAND_CREATE_BACKUP="cd /app && /usr/local/bin/python manage.py create_wiki_backup --output-dir /backups"
+COMMAND_CREATE_BACKUP="cd /app && /usr/local/bin/python manage.py create_wiki_backup --output-dir /app/backups"
 
 sh -c "${COMMAND_CREATE_BACKUP}"
 CREATE_EXIT_CODE=$?
@@ -19,7 +19,7 @@ CREATE_EXIT_CODE=$?
 if [ $CREATE_EXIT_CODE -eq 0 ]; then
     log_message "Backup command finished successfully. Now pruning old backups..."
     
-    COMMAND_PRUNE_BACKUPS="cd /app && /usr/local/bin/python manage.py prune_backups --backup-dir /backups"
+    COMMAND_PRUNE_BACKUPS="cd /app && /usr/local/bin/python manage.py prune_backups --backup-dir /app/backups"
     
     sh -c "${COMMAND_PRUNE_BACKUPS}"
     PRUNE_EXIT_CODE=$?
