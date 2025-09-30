@@ -30,7 +30,7 @@ RUN apt-get update && \
     netcat-openbsd \
     libpango-1.0-0 \
     libcairo2 \
-    libgdk-pixbuf2.0-0 \
+    libgdk-pixbuf-xlib-2.0-0 \
     libpangoft2-1.0-0 \
     cron \
     zip \
