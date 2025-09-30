@@ -1,11 +1,37 @@
+# syntax=docker/dockerfile:1
+
+# --- Base Stage ---
+# We still use "AS base" so the builder stage can copy from it if needed,
+# but we won't use "base" in subsequent FROM lines.
+FROM python:3.13-slim AS base
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# --- Builder Stage (for Python dependencies) ---
+# CHANGE THIS LINE: from "base" to "python:3.13-slim"
+FROM python:3.13-slim AS builder 
+# COPY requirements.txt . is not needed here if it's already in the base context
+# but we do need the WORKDIR
+WORKDIR /app
+COPY requirements.txt .
+RUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
+
 # --- Final Stage ---
-FROM base AS final
+# CHANGE THIS LINE: from "base" to "python:3.13-slim"
+FROM python:3.13-slim AS final
 
 ARG APP_USER=appuser
 
 ENV TZ=Europe/Brussels
 
-# Add gosu for privilege dropping
+# You had gosu here in a previous version, I'm adding it back
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     gosu \
@@ -33,12 +59,9 @@ RUN chmod +x /app/entrypoint.sh /app/cron_entrypoint.sh
 
 COPY . .
 
-# NOTE: The chown here is still good for files copied into the image,
-# but we will re-run it in the entrypoint for the volumes.
 RUN chown -R ${APP_USER}:${APP_USER} /app
 
-# REMOVE the USER instruction. The container will now start as root.
-# We will drop to the appuser inside the entrypoint script.
+# Remember to remove USER instruction to let entrypoint start as root
 # USER ${APP_USER}
 
 EXPOSE 8000
