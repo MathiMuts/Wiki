@@ -1,22 +1,3 @@
-# syntax=docker/dockerfile:1
-
-# --- Base Stage ---
-FROM python:3.13-slim AS base
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-WORKDIR /app
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# --- Builder Stage (for Python dependencies) ---
-FROM base AS builder
-COPY requirements.txt .
-RUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
-
 # --- Final Stage ---
 FROM base AS final
 
@@ -24,8 +5,10 @@ ARG APP_USER=appuser
 
 ENV TZ=Europe/Brussels
 
+# Add gosu for privilege dropping
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    gosu \
     libpq5 \
     netcat-openbsd \
     libpango-1.0-0 \
@@ -50,11 +33,13 @@ RUN chmod +x /app/entrypoint.sh /app/cron_entrypoint.sh
 
 COPY . .
 
-RUN mkdir -p /app/staticfiles /app/media && \
-    chown -R ${APP_USER}:${APP_USER} /app
+# NOTE: The chown here is still good for files copied into the image,
+# but we will re-run it in the entrypoint for the volumes.
+RUN chown -R ${APP_USER}:${APP_USER} /app
 
-# Switch to non-root
-USER ${APP_USER}
+# REMOVE the USER instruction. The container will now start as root.
+# We will drop to the appuser inside the entrypoint script.
+# USER ${APP_USER}
 
 EXPOSE 8000
 
