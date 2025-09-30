@@ -2,34 +2,37 @@
 set -e
 
 # --- Log Start ---
-# Using /proc/1/fd/1 and /proc/1/fd/2 to send output to the container's main stdout/stderr
 log_message() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] run_backup_job.sh: $1" >> /proc/1/fd/1 2>> /proc/1/fd/2
 }
 
 log_message "Backup job started."
 
-# --- Verify Critical Environment Variables (Optional but good for sanity checking) ---
-# These should be inherited from the container's environment (set via docker-compose env_file/environment)
-# log_message "DJANGO_SETTINGS_MODULE is: '${DJANGO_SETTINGS_MODULE}'"
-# log_message "DB_HOST is: '${DB_HOST}'"
-# log_message "DB_NAME is: '${DB_NAME}'"
-# Add any other critical env vars you want to check if they are present.
-# If they are blank here, it means cron isn't inheriting them properly from the container's main env.
+# --- 1. Execute Backup Command ---
+log_message "Running Django create_wiki_backup command..."
+COMMAND_CREATE_BACKUP="cd /app && /usr/local/bin/python manage.py create_wiki_backup --output-dir /backups_archive"
 
-# --- Define and Execute Backup Command ---
-COMMAND_TO_RUN="cd /app && /usr/local/bin/python manage.py create_wiki_backup --output-dir /backups_archive"
-# log_message "Executing: ${COMMAND_TO_RUN}" # Usually not needed if the command itself logs
+sh -c "${COMMAND_CREATE_BACKUP}"
+CREATE_EXIT_CODE=$?
 
-# Execute the command. Its stdout/stderr will be redirected by the crontab entry.
-sh -c "${COMMAND_TO_RUN}"
-EXIT_CODE=$?
+# --- 2. Check result and conditionally run Prune Command ---
+if [ $CREATE_EXIT_CODE -eq 0 ]; then
+    log_message "Backup command finished successfully. Now pruning old backups..."
+    
+    COMMAND_PRUNE_BACKUPS="cd /app && /usr/local/bin/python manage.py prune_backups --backup-dir /backups_archive"
+    
+    sh -c "${COMMAND_PRUNE_BACKUPS}"
+    PRUNE_EXIT_CODE=$?
 
-# --- Log Completion ---
-if [ $EXIT_CODE -eq 0 ]; then
-    log_message "Backup command finished successfully (exit code ${EXIT_CODE})."
+    if [ $PRUNE_EXIT_CODE -eq 0 ]; then
+        log_message "Pruning command finished successfully."
+    else
+        log_message "Pruning command FAILED with exit code ${PRUNE_EXIT_CODE}."
+    fi
+    # We exit with the prune exit code, which will be 0 on success.
+    exit $PRUNE_EXIT_CODE
+
 else
-    log_message "Backup command FAILED (exit code ${EXIT_CODE}). Check logs from the command itself."
+    log_message "Backup command FAILED with exit code ${CREATE_EXIT_CODE}. Skipping prune step."
+    exit $CREATE_EXIT_CODE
 fi
-
-exit $EXIT_CODE

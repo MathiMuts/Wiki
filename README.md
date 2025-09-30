@@ -34,3 +34,28 @@ DB_PORT=5432 # Default PostgreSQL port inside the container network
 REDIS_HOST=redis # This is the service name from docker-compose.yml
 REDIS_PORT=6379 # Default Redis port inside the container network
 ```
+
+## Restore backup
+To revert to a backup, first we need to enter the container:
+`docker exec -it web bash`
+
+Then we perform a dry-run:
+```
+cd /app
+python manage.py restore_backup ./backups/yyyy-mm-dd-hh-mm.zip --dry-run
+
+# To also see which pages would be deleted:
+python manage.py restore_backup ./backups/yyyy-mm-dd-hh-mm.zip --dry-run --delete-unmatched
+```
+After reviewing the output, we can run 'for real':
+```
+cd /app
+# Restore and keep existing pages that aren't in the backup
+python manage.py restore_backup ./backups/yyyy-mm-dd-hh-mm.zip
+```
+OR
+```
+cd /app
+# Perform a full point-in-time restore, deleting pages not in the backup
+python manage.py restore_backup ./backups/yyyy-mm-dd-hh-mm.zip --delete-unmatched
+```
