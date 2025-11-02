@@ -1,4 +1,5 @@
 {% comment %} templates/wiki/modules/_menu.html {% endcomment %}
+{% if user.is_authenticated %}
 {% load static %}
 <link rel="stylesheet" href="{% static 'wiki/css/menu.css'%}">
 
@@ -71,3 +72,4 @@
     {{ all_wiki_pages_json|safe }}
 </script>
 <script src="{% static 'wiki/JS/wiki_menu.js' %}" defer></script>
+{% endif %}
