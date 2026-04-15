@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Countersunk Head -->
+  <polygon points="5,15 95,15 65,40 35,40" fill="#3b3b3b"/>
+  <!-- Tapering Pointy Shaft -->
+  <polygon points="35,40 65,40 55,75 50,95 45,75" fill="#3b3b3b"/>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Dome Head -->
+  <path d="M 10,45 Q 50,-5 90,45 Z" fill="#3b3b3b"/>
+  <!-- Shaft / Thread -->
+  <rect x="35" y="45" width="30" height="50" fill="#3b3b3b"/>
+</svg>

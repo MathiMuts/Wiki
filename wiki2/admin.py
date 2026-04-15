@@ -1,6 +1,6 @@
 # wiki/admin.py
 from django.contrib import admin
-from .models import WikiPage, WikiFile, Profile
+from .models import WikiPage, WikiFile, Profile, LabelIcon
 from django.urls import reverse
 from django.utils.html import format_html
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
@@ -39,6 +39,10 @@ class WikiFileAdmin(admin.ModelAdmin):
         if not obj.pk: 
             obj.uploaded_by = request.user
         super().save_model(request, obj, form, change)
+        
+@admin.register(LabelIcon)
+class LabelIconAdmin(admin.ModelAdmin):
+    list_display = ('name',)
 
 class ProfileInline(admin.StackedInline):
     model = Profile
