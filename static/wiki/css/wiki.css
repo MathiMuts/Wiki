@@ -4,6 +4,8 @@
 :root {
     --wiki-button-primary-bg: #007bff;
     --wiki-button-primary-text: white;
+    --wiki-button-secondary-bg: #63a4ff;
+    --wiki-button-secondary-text: white;
     --wiki-button-success-bg: #5cb85c;
     --wiki-button-success-text: white;
     --wiki-button-warning-bg: #f0ad4e;
@@ -11,8 +13,8 @@
     --wiki-button-danger-bg: #d9534f;
     --wiki-button-danger-text: white;
     --wiki-button-danger-bg-hover: #c82333;
-    --wiki-button-secondary-bg: #6c757d;
-    --wiki-button-secondary-text: white;
+    --wiki-button-gray-bg: #6c757d;
+    --wiki-button-gray-text: white;
 
     --wiki-button-disabled-bg: #adb5bd;
     --wiki-button-disabled-text: #6c757d;
@@ -93,6 +95,10 @@ input[type="file"]::file-selector-button {
     background-color: var(--wiki-button-primary-bg);
     color: var(--wiki-button-primary-text);
 }
+.button-secondary {
+    background-color: var(--wiki-button-secondary-bg);
+    color: var(--wiki-button-secondary-text);
+}
 .actions .create, .button-create {
     background-color: var(--wiki-button-success-bg);
     color: var(--wiki-button-success-text);
@@ -106,8 +112,8 @@ input[type="file"]::file-selector-button {
     color: var(--wiki-button-danger-text);
 }
 .actions .button-link.cancel, .button-cancel, .file-download-btn, .subpage-download-btn {
-    background-color: var(--wiki-button-secondary-bg);
-    color: var(--wiki-button-secondary-text);
+    background-color: var(--wiki-button-gray-bg);
+    color: var(--wiki-button-gray-text);
 }
 /* For subpage-delete-btn that is just a link to an edit page but styled as delete */
 .subpage-delete-btn {

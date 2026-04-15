@@ -13,3 +13,12 @@ def qr_img(request):
     img.save(buffer, format='PNG')
     img_base64 = base64.b64encode(buffer.getvalue()).decode()
     return img_base64
+
+def qr_img_for_url(url):
+    qr = qrcode.QRCode(box_size=5, border=0, error_correction=qrcode.constants.ERROR_CORRECT_M)
+    qr.add_data(url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffer = BytesIO()
+    img.save(buffer, format='PNG')
+    return base64.b64encode(buffer.getvalue()).decode()

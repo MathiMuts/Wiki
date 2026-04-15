@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hardware SVG Icon Spec-Sheet</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 40px;
+        }
+        .header {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 40px;
+        }
+        h1 { margin-top: 0; }
+        .guidelines {
+            background-color: #eef2f5;
+            padding: 15px 20px;
+            border-left: 5px solid #3b3b3b;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+        .icon-preview {
+            width: 60px;
+            height: 60px;
+            flex-shrink: 0;
+            /* Gray background to show that white is used for cutouts */
+            background-color: #e0e0e0; 
+            border-radius: 4px;
+            padding: 5px;
+        }
+        .icon-preview svg {
+            width: 100%;
+            height: 100%;
+        }
+        h3 { margin: 0; font-size: 18px; }
+        pre {
+            background: #2d2d2d;
+            color: #ccc;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 12px;
+            margin: 0;
+        }
+        code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Hardware SVG Icon Spec-Sheet</h1>
+        <p>This document serves as the master style guide and component library for the industrial label generator icons.</p>
+        
+        <h2>AI Generation Guidelines</h2>
+        <div class="guidelines">
+            1. <strong>ViewBox:</strong> Always use <code>viewBox="0 0 100 100"</code>.<br>
+            2. <strong>Primary Color:</strong> Solid hardware bodies must use <code>fill="#3b3b3b"</code>.<br>
+            3. <strong>Cutouts & Transparency:</strong> Use <code>fill="white"</code> or <code>stroke="white"</code> to represent holes, drive recesses, threads, or cutouts. (The system relies on white acting as a transparent mask against white label backgrounds).<br>
+            4. <strong>Perspective:</strong> Strictly 2D orthographic. Use pure Top-Down views for drive types/nuts/washers, and pure Side-Profiles for screws/bolts.<br>
+            5. <strong>Style:</strong> Minimalist, bold, industrial, flat. No gradients, shadows, or complex perspective lines. Stroke widths should be bold (usually 4-6px).
+        </div>
+    </div>
+
+    <div class="grid">
+        <!-- Top Views (Drives & Nuts) -->
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#3b3b3b"/><rect x="5" y="38" width="90" height="24" fill="white"/></svg></div>
+                <h3>Flathead / Slotted (Top)</h3>
+            </div>
+<pre><code>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"&gt;
+  &lt;circle cx="50" cy="50" r="45" fill="#3b3b3b"/&gt;
+  &lt;rect x="5" y="38" width="90" height="24" fill="white"/&gt;
+&lt;/svg&gt;</code></pre>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#3b3b3b"/><rect x="38" y="10" width="24" height="80" rx="2" fill="white"/><rect x="10" y="38" width="80" height="24" rx="2" fill="white"/></svg></div>
+                <h3>Phillips (Top)</h3>
+            </div>
+<pre><code>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"&gt;
+  &lt;circle cx="50" cy="50" r="45" fill="#3b3b3b"/&gt;
+  &lt;rect x="38" y="10" width="24" height="80" rx="2" fill="white"/&gt;
+  &lt;rect x="10" y="38" width="80" height="24" rx="2" fill="white"/&gt;
+&lt;/svg&gt;</code></pre>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#3b3b3b"/><polygon points="22,50 36,26 64,26 78,50 64,74 36,74" fill="white"/></svg></div>
+                <h3>Hex Head / Socket (Top)</h3>
+            </div>
+<pre><code>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"&gt;
+  &lt;circle cx="50" cy="50" r="45" fill="#3b3b3b"/&gt;
+  &lt;polygon points="22,50 36,26 64,26 78,50 64,74 36,74" fill="white"/&gt;
+&lt;/svg&gt;</code></pre>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#3b3b3b"/><path d="M50 18 L58 35 L76 35 L62 48 L68 66 L50 55 L32 66 L38 48 L24 35 L42 35 Z" fill="white" stroke="white" stroke-width="5" stroke-linejoin="round"/></svg></div>
+                <h3>Torx / Star (Top)</h3>
+            </div>
+<pre><code>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"&gt;
+  &lt;circle cx="50" cy="50" r="45" fill="#3b3b3b"/&gt;
+  &lt;path d="M50 18 L58 35 L76 35 L62 48 L68 66 L50 55 L32 66 L38 48 L24 35 L42 35 Z" fill="white" stroke="white" stroke-width="5" stroke-linejoin="round"/&gt;
+&lt;/svg&gt;</code></pre>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#3b3b3b"/><path d="M50 18 L58 35 L76 35 L62 48 L68 66 L50 55 L32 66 L38 48 L24 35 L42 35 Z" fill="white" stroke="white" stroke-width="5" stroke-linejoin="round"/><circle cx="50" cy="50" r="8" fill="#3b3b3b"/></svg></div>
+                <h3>Security Torx (Top)</h3>
+            </div>
+<pre><code>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"&gt;
+  &lt;circle cx="50" cy="50" r="45" fill="#3b3b3b"/&gt;
+  &lt;path d="M50 18 L58 35 L76 35 L62 48 L68 66 L50 55 L32 66 L38 48 L24 35 L42 35 Z" fill="white" stroke="white" stroke-width="5" stroke-linejoin="round"/&gt;
+  &lt;circle cx="50" cy="50" r="8" fill="#3b3b3b"/&gt;
+&lt;/svg&gt;</code></pre>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#3b3b3b"/><rect x="30" y="30" width="40" height="40" rx="4" fill="white"/></svg></div>
+                <h3>Square / Robertson (Top)</h3>
+            </div>
+<pre><code>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"&gt;
+  &lt;circle cx="50" cy="50" r="45" fill="#3b3b3b"/&gt;
+  &lt;rect x="30" y="30" width="40" height="40" rx="4" fill="white"/&gt;
+&lt;/svg&gt;</code></pre>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#3b3b3b"/><line x1="25" y1="25" x2="75" y2="75" stroke="white" stroke-width="4" stroke-linecap="round"/><line x1="25" y1="75" x2="75" y2="25" stroke="white" stroke-width="4" stroke-linecap="round"/><rect x="38" y="10" width="24" height="80" rx="2" fill="white"/><rect x="10" y="38" width="80" height="24" rx="2" fill="white"/></svg></div>
+                <h3>Pozidriv (Top)</h3>
+            </div>
+<pre><code>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"&gt;
+  &lt;circle cx="50" cy="50" r="45" fill="#3b3b3b"/&gt;
+  &lt;line x1="25" y1="25" x2="75" y2="75" stroke="white" stroke-width="4" stroke-linecap="round"/&gt;
+  &lt;line x1="25" y1="75" x2="75" y2="25" stroke="white" stroke-width="4" stroke-linecap="round"/&gt;
+  &lt;rect x="38" y="10" width="24" height="80" rx="2" fill="white"/&gt;
+  &lt;rect x="10" y="38" width="80" height="24" rx="2" fill="white"/&gt;
+&lt;/svg&gt;</code></pre>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="5,50 27.5,11 72.5,11 95,50 72.5,89 27.5,89" fill="#3b3b3b"/><circle cx="50" cy="50" r="22" fill="white"/></svg></div>
+                <h3>Hex Nut (Top)</h3>
+            </div>
+<pre><code>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"&gt;
+  &lt;polygon points="5,50 27.5,11 72.5,11 95,50 72.5,89 27.5,89" fill="#3b3b3b"/&gt;
+  &lt;circle cx="50" cy="50" r="22" fill="white"/&gt;
+&lt;/svg&gt;</code></pre>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 25,45 C 25,5 75,5 75,45" fill="#3b3b3b"/><polygon points="5,50 25,25 75,25 95,50 75,85 25,85" fill="#3b3b3b"/><circle cx="50" cy="50" r="20" fill="white"/></svg></div>
+                <h3>Nyloc Nut (Top)</h3>
+            </div>
+<pre><code>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"&gt;
+  &lt;path d="M 25,45 C 25,5 75,5 75,45" fill="#3b3b3b"/&gt;
+  &lt;polygon points="5,50 25,25 75,25 95,50 75,85 25,85" fill="#3b3b3b"/&gt;
+  &lt;circle cx="50" cy="50" r="20" fill="white"/&gt;
+&lt;/svg&gt;</code></pre>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><ellipse cx="25" cy="40" rx="15" ry="30" transform="rotate(-35 25 40)" fill="#3b3b3b"/><ellipse cx="75" cy="40" rx="15" ry="30" transform="rotate(35 75 40)" fill="#3b3b3b"/><circle cx="50" cy="65" r="25" fill="#3b3b3b"/><circle cx="50" cy="65" r="12" fill="white"/></svg></div>
+                <h3>Wing Nut (Top)</h3>
+            </div>
+<pre><code>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"&gt;
+  &lt;ellipse cx="25" cy="40" rx="15" ry="30" transform="rotate(-35 25 40)" fill="#3b3b3b"/&gt;
+  &lt;ellipse cx="75" cy="40" rx="15" ry="30" transform="rotate(35 75 40)" fill="#3b3b3b"/&gt;
+  &lt;circle cx="50" cy="65" r="25" fill="#3b3b3b"/&gt;
+  &lt;circle cx="50" cy="65" r="12" fill="white"/&gt;
+&lt;/svg&gt;</code></pre>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#3b3b3b"/><circle cx="50" cy="50" r="25" fill="white"/></svg></div>
+                <h3>Washer (Top)</h3>
+            </div>
+<pre><code>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"&gt;
+  &lt;circle cx="50" cy="50" r="45" fill="#3b3b3b"/&gt;
+  &lt;circle cx="50" cy="50" r="25" fill="white"/&gt;
+&lt;/svg&gt;</code></pre>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#3b3b3b"/><circle cx="50" cy="50" r="25" fill="white"/><line x1="10" y1="10" x2="40" y2="40" stroke="white" stroke-width="6"/></svg></div>
+                <h3>Split/Lock Washer (Top)</h3>
+            </div>
+<pre><code>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"&gt;
+  &lt;circle cx="50" cy="50" r="45" fill="#3b3b3b"/&gt;
+  &lt;circle cx="50" cy="50" r="25" fill="white"/&gt;
+  &lt;line x1="10" y1="10" x2="40" y2="40" stroke="white" stroke-width="6"/&gt;
+&lt;/svg&gt;</code></pre>
+        </div>
+
+        <!-- Side Profiles (Bolts, Screws, Inserts) -->
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="5,20 95,20 65,55 35,55" fill="#3b3b3b"/><rect x="35" y="55" width="30" height="40" fill="#3b3b3b"/></svg></div>
+                <h3>Countersunk Screw (Side)</h3>
+            </div>
+<pre><code>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"&gt;
+  &lt;polygon points="5,20 95,20 65,55 35,55" fill="#3b3b3b"/&gt;
+  &lt;rect x="35" y="55" width="30" height="40" fill="#3b3b3b"/&gt;
+&lt;/svg&gt;</code></pre>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="5,15 95,15 65,40 35,40" fill="#3b3b3b"/><polygon points="35,40 65,40 55,75 50,95 45,75" fill="#3b3b3b"/></svg></div>
+                <h3>Woodscrew/Self-Tap (Side)</h3>
+            </div>
+<pre><code>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"&gt;
+  &lt;polygon points="5,15 95,15 65,40 35,40" fill="#3b3b3b"/&gt;
+  &lt;polygon points="35,40 65,40 55,75 50,95 45,75" fill="#3b3b3b"/&gt;
+&lt;/svg&gt;</code></pre>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 10,45 Q 50,-5 90,45 Z" fill="#3b3b3b"/><rect x="35" y="45" width="30" height="50" fill="#3b3b3b"/></svg></div>
+                <h3>Pan Head (Side)</h3>
+            </div>
+<pre><code>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"&gt;
+  &lt;path d="M 10,45 Q 50,-5 90,45 Z" fill="#3b3b3b"/&gt;
+  &lt;rect x="35" y="45" width="30" height="50" fill="#3b3b3b"/&gt;
+&lt;/svg&gt;</code></pre>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 10,40 Q 50,0 90,40 Z" fill="#3b3b3b"/><rect x="35" y="40" width="30" height="55" fill="#3b3b3b"/></svg></div>
+                <h3>Button Head (Side)</h3>
+            </div>
+<pre><code>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"&gt;
+  &lt;path d="M 10,40 Q 50,0 90,40 Z" fill="#3b3b3b"/&gt;
+  &lt;rect x="35" y="40" width="30" height="55" fill="#3b3b3b"/&gt;
+&lt;/svg&gt;</code></pre>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="20" y="15" width="60" height="35" rx="3" fill="#3b3b3b"/><rect x="35" y="50" width="30" height="45" fill="#3b3b3b"/></svg></div>
+                <h3>Socket / Cap Head (Side)</h3>
+            </div>
+<pre><code>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"&gt;
+  &lt;rect x="20" y="15" width="60" height="35" rx="3" fill="#3b3b3b"/&gt;
+  &lt;rect x="35" y="50" width="30" height="45" fill="#3b3b3b"/&gt;
+&lt;/svg&gt;</code></pre>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="10" y="20" width="80" height="30" fill="#3b3b3b" rx="2"/><line x1="30" y1="20" x2="30" y2="50" stroke="white" stroke-width="4"/><line x1="70" y1="20" x2="70" y2="50" stroke="white" stroke-width="4"/><rect x="35" y="50" width="30" height="45" fill="#3b3b3b"/></svg></div>
+                <h3>Hex Bolt Head (Side)</h3>
+            </div>
+<pre><code>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"&gt;
+  &lt;rect x="10" y="20" width="80" height="30" fill="#3b3b3b" rx="2"/&gt;
+  &lt;line x1="30" y1="20" x2="30" y2="50" stroke="white" stroke-width="4"/&gt;
+  &lt;line x1="70" y1="20" x2="70" y2="50" stroke="white" stroke-width="4"/&gt;
+  &lt;rect x="35" y="50" width="30" height="45" fill="#3b3b3b"/&gt;
+&lt;/svg&gt;</code></pre>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="25" y="10" width="50" height="80" rx="2" fill="#3b3b3b"/><line x1="25" y1="25" x2="75" y2="25" stroke="white" stroke-width="5"/><line x1="25" y1="45" x2="75" y2="45" stroke="white" stroke-width="5"/><line x1="25" y1="65" x2="75" y2="65" stroke="white" stroke-width="5"/><line x1="25" y1="85" x2="75" y2="85" stroke="white" stroke-width="5"/></svg></div>
+                <h3>Threaded / Heat-Set Insert (Side)</h3>
+            </div>
+<pre><code>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"&gt;
+  &lt;rect x="25" y="10" width="50" height="80" rx="2" fill="#3b3b3b"/&gt;
+  &lt;line x1="25" y1="25" x2="75" y2="25" stroke="white" stroke-width="5"/&gt;
+  &lt;line x1="25" y1="45" x2="75" y2="45" stroke="white" stroke-width="5"/&gt;
+  &lt;line x1="25" y1="65" x2="75" y2="65" stroke="white" stroke-width="5"/&gt;
+  &lt;line x1="25" y1="85" x2="75" y2="85" stroke="white" stroke-width="5"/&gt;
+&lt;/svg&gt;</code></pre>
+        </div>
+
+    </div>
+</body>
+</html>

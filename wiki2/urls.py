@@ -17,6 +17,7 @@ urlpatterns = [
     
     path('<slug:slug>/', views.wiki_page, name='wiki_page'),
     path('<slug:slug>/edit/', views.page_edit, name='page_edit'),
+    path('<slug:slug>/label/', views.page_export_label, name='page_export_label'),
     path('<slug:slug>/delete/', views.page_delete, name='page_delete'),
     path('<slug:slug>/upload/', views.page_upload_file, name='page_upload_file'),
     path('<slug:slug>/delete_file/<int:file_id>/', views.page_delete_file, name='page_delete_file'),

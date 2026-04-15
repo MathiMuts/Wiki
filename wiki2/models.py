@@ -150,3 +150,10 @@ class WikiFile(models.Model):
             name_part, _ = os.path.splitext(os.path.basename(self.file.name))
             self.filename_slug = slugify(name_part) if name_part and slugify(name_part) else 'file'
         super().save(*args, **kwargs)
+        
+class LabelIcon(models.Model):
+    name = models.CharField(max_length=50, help_text="Name of the icon (e.g., 'Warning', 'Info')")
+    icon = models.FileField(upload_to='label_icons/', help_text="Upload a square icon (SVG, PNG, etc.)")
+
+    def __str__(self):
+        return self.name

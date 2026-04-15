@@ -3,7 +3,7 @@ import os
 import mimetypes
 import hashlib
 
-from .models import WikiPage, WikiFile
+from .models import WikiPage, WikiFile, LabelIcon 
 from .forms import WikiPageForm, WikiFileForm, UserUpdateForm, ProfileUpdateForm
 from . import constants
 from . import utils
@@ -241,6 +241,21 @@ def page_download_file(request, slug, file_id):
     except IOError:
         raise Http404("Error reading file.")
 
+@login_required
+def page_export_label(request, slug):
+    visible_pages = get_visible_pages(request.user)
+    page = get_object_or_404(visible_pages, slug=slug)
+
+    page_url = request.build_absolute_uri(page.get_absolute_url())
+    qr_base64 = utils.qr_img_for_url(page_url)
+    
+    icons = LabelIcon.objects.all()
+
+    return render(request, 'wiki/pages/label_export.html', {
+        'page': page,
+        'qr_base64': qr_base64,
+        'icons': icons,
+    })
 
 def view_image_in_archive(request, file_id):
     wiki_file = get_object_or_404(WikiFile, pk=file_id)
