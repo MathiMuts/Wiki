@@ -262,9 +262,9 @@
         ctx.fillStyle = '#000000';
         ctx.textBaseline = 'top';
         const textX = 2.5 * SCALE; // 2.5mm left margin
-        const textMaxW = iconX - textX - (1.5 * SCALE); // 1.5mm gap before icons
+        const textMaxW = iconX - textX;
 
-        ctx.font = `600 ${4.5 * SCALE}px "Barlow", Arial, sans-serif`; 
+        ctx.font = `500 ${4.5 * SCALE}px "Barlow", Arial, sans-serif`; 
         fillTextWithEllipsis(ctx, inLine1.value, textX, 1.5 * SCALE, textMaxW);
 
         ctx.font = `400 ${3.2 * SCALE}px "Barlow", Arial, sans-serif`;
