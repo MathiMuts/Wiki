@@ -1,5 +1,6 @@
 # wiki2/views.py
 import os
+import json
 import mimetypes
 import hashlib
 
@@ -19,6 +20,11 @@ from django.contrib.auth.views import redirect_to_login
 from django.contrib import messages
 from django.core.cache import cache
 from django.utils.text import slugify
+from django.utils.timezone import localtime
+from django.utils.formats import date_format
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_slug
+from django.views.decorators.http import require_POST
 from urllib.parse import urlencode
 
 def get_visible_pages(user):
@@ -189,25 +195,96 @@ def page_delete(request, slug):
     return render(request, 'wiki/pages/page_confirm_delete.html', {'page': page})
 
 
+def _uploaded_file_payload(wiki_file, page):
+    return {
+        'id': wiki_file.id,
+        'url': wiki_file.file.url,
+        'name': wiki_file.filename_display,
+        'filename_slug_stored': wiki_file.filename_slug,
+        'uploaded_at_display': date_format(localtime(wiki_file.uploaded_at), 'M d, Y H:i'),
+        'uploaded_by_username': wiki_file.uploaded_by.username if wiki_file.uploaded_by else '',
+        'delete_url': reverse('wiki:page_delete_file', kwargs={'slug': page.slug, 'file_id': wiki_file.id}),
+    }
+
+
 @login_required
-def page_upload_file(request, slug):
+@require_POST
+def page_upload_init(request, slug):
     page = get_object_or_404(WikiPage, slug=slug)
-    if request.method == 'POST':
-        form = WikiFileForm(request.POST, request.FILES)
-        if form.is_valid():
-            wiki_file = form.save(commit=False)
-            wiki_file.page = page
-            wiki_file.uploaded_by = request.user
-            wiki_file.save()
-            file_data = {
-                'id': wiki_file.id,
-                'url': wiki_file.file.url,
-                'name': wiki_file.filename_display,
-                'delete_url': reverse('wiki:page_delete_file', kwargs={'slug': page.slug, 'file_id': wiki_file.id})
-            }
-            return JsonResponse({'status': 'success', 'file': file_data})
-        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
-    return HttpResponseBadRequest("Invalid request method")
+    try:
+        data = json.loads(request.body)
+    except ValueError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid request body.'}, status=400)
+
+    filename = os.path.basename(str(data.get('filename', '')).replace('\\', '/')).strip()
+    filename_slug = str(data.get('filename_slug', '')).strip()
+    total_size = data.get('size')
+
+    errors = {}
+    if not filename:
+        errors['file'] = ['No file selected.']
+    elif not isinstance(total_size, int) or total_size <= 0:
+        errors['file'] = ['The submitted file is empty.']
+    if filename_slug:
+        if len(filename_slug) > WikiFile._meta.get_field('filename_slug').max_length:
+            errors['filename_slug'] = ['This slug is too long.']
+        else:
+            try:
+                validate_slug(filename_slug)
+            except ValidationError as e:
+                errors['filename_slug'] = e.messages
+    if errors:
+        return JsonResponse({'status': 'error', 'errors': errors}, status=400)
+
+    upload_id = services.start_chunked_upload(page, request.user, filename, filename_slug, total_size)
+    return JsonResponse({'status': 'success', 'upload_id': upload_id, 'chunk_size': constants.UPLOAD_CHUNK_SIZE})
+
+
+@login_required
+@require_POST
+def page_upload_chunk(request, slug, upload_id):
+    page = get_object_or_404(WikiPage, slug=slug)
+    upload = services.get_chunked_upload(upload_id, page, request.user)
+    if upload is None:
+        return JsonResponse({'status': 'error', 'message': 'Upload not found or expired.'}, status=404)
+    try:
+        offset = int(request.headers.get('X-Upload-Offset', ''))
+    except ValueError:
+        return JsonResponse({'status': 'error', 'message': 'Missing X-Upload-Offset header.'}, status=400)
+
+    try:
+        received = services.write_upload_chunk(upload, offset, request)
+    except services.ChunkedUploadError as e:
+        return JsonResponse({'status': 'error', 'message': str(e), 'received': e.received}, status=409)
+    return JsonResponse({'status': 'success', 'received': received})
+
+
+@login_required
+@require_POST
+def page_upload_complete(request, slug, upload_id):
+    page = get_object_or_404(WikiPage, slug=slug)
+    upload = services.get_chunked_upload(upload_id, page, request.user)
+    if upload is None:
+        return JsonResponse({'status': 'error', 'message': 'Upload not found or expired.'}, status=404)
+    try:
+        wiki_file = services.complete_chunked_upload(upload, page, request.user)
+    except services.ChunkedUploadError as e:
+        return JsonResponse({'status': 'error', 'message': str(e), 'received': e.received}, status=409)
+    return JsonResponse({
+        'status': 'success',
+        'message': f"File '{wiki_file.filename_display}' uploaded successfully.",
+        'file': _uploaded_file_payload(wiki_file, page),
+    })
+
+
+@login_required
+@require_POST
+def page_upload_cancel(request, slug, upload_id):
+    page = get_object_or_404(WikiPage, slug=slug)
+    upload = services.get_chunked_upload(upload_id, page, request.user)
+    if upload is not None:
+        services.cancel_chunked_upload(upload)
+    return JsonResponse({'status': 'success'})
 
 
 @login_required

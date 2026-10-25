@@ -254,3 +254,12 @@ STANDARD_MARKDOWN_LINK_RE = re.compile(
 )
 
 MARKDOWN_IMAGE_RE = re.compile(r"!\[(.*?)\]\((.*?)(?:\s+(['\"])(.*?)\3)?\)")
+
+# --- Chunked uploads ---
+# Large attachments are sent in pieces so no single request runs into proxy/gunicorn limits.
+UPLOAD_CHUNK_SIZE = 10 * 1024 * 1024  # 10 MB
+# Staging lives inside MEDIA_ROOT so finished uploads can be renamed (not copied) into place.
+# The leading dot keeps it unreachable through nginx (`location ~ /\.` denies it).
+CHUNKED_UPLOAD_DIR_NAME = '.chunked_uploads'
+# Unfinished uploads untouched for this long are removed.
+CHUNKED_UPLOAD_STALE_SECONDS = 24 * 60 * 60
