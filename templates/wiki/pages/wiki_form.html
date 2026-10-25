@@ -4,6 +4,8 @@
 {% block title%}{% if page %}{{ page.title }}{% else %}{{ action }} Page{% endif %} - Wiki{% endblock %}
 {% load static %}
 {% block content %}
+    <link rel="stylesheet" href="{% static 'wiki/css/upload.css' %}">
+    <script src="{% static 'wiki/JS/chunked_upload.js' %}" defer></script>
     <form method="post" id="wikiPageForm" action=""> 
         {% csrf_token %}
 
@@ -116,6 +118,7 @@
             {% if user.is_authenticated and upload_form %}
                 <div class="upload-section">
                     <h2 style="margin-top: 20px;">Upload New File <span id="uploadStatusMessage" style="margin-left: 10px; font-size: 1em; font-weight: normal;"></span></h2>
+                    <ul class="upload-queue" id="uploadQueue" aria-live="polite"></ul>
                     <form id="fileUploadForm" enctype="multipart/form-data" class="upload-form">
                         <div class="form-row-responsive file-upload-row"> 
                             <div class="form-group form-group-responsive">
@@ -224,11 +227,9 @@ document.addEventListener('DOMContentLoaded', function() {
         let baseSlug = slugify_js(nameWithoutExt) || 'file'; // Use global slugify_js
         
         const existingSlugs = [];
-        if (fileListContainer) {
-            fileListContainer.querySelectorAll('li.file-item').forEach(item => {
-                if (item.dataset.filenameSlug) existingSlugs.push(item.dataset.filenameSlug);
-            });
-        }
+        document.querySelectorAll('#fileListContainer li.file-item, #uploadQueue li.upload-item').forEach(item => {
+            if (item.dataset.filenameSlug) existingSlugs.push(item.dataset.filenameSlug);
+        });
 
         let finalSlug = baseSlug;
         let counter = 1;
@@ -269,108 +270,166 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    if (fileUploadForm) { 
-         fileUploadForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            if (uploadStatusMessage) {
-                uploadStatusMessage.textContent = 'Uploading...';
-                uploadStatusMessage.style.color = 'inherit';
+    const uploadQueue = document.getElementById('uploadQueue');
+    const uploadInitUrl = "{% if page %}{% url 'wiki:page_upload_init' page.slug %}{% endif %}";
+    const filenameSlugDefaultHelp = "{% if upload_form.filename_slug.help_text %}{{ upload_form.filename_slug.help_text|safe|escapejs }}{% else %}Auto-generated from filename if left blank.{% endif %}";
+    let activeUploads = 0;
+
+    function setUploadStatusMessage(text, color) {
+        if (!uploadStatusMessage) return;
+        uploadStatusMessage.textContent = text;
+        uploadStatusMessage.style.color = color || 'inherit';
+        if (text) setTimeout(() => { if (uploadStatusMessage.textContent === text) uploadStatusMessage.textContent = ''; }, 5000);
+    }
+
+    function appendFileListItem(newFile) {
+        const li = document.createElement('li');
+        li.classList.add('file-item');
+        li.id = `file-item-${newFile.id}`;
+        li.dataset.filenameSlug = newFile.filename_slug_stored;
+
+        const link = document.createElement('a');
+        link.href = newFile.url;
+        link.target = '_blank';
+        link.className = 'file-link';
+        link.textContent = newFile.name;
+
+        const meta = document.createElement('small');
+        meta.className = 'file-meta';
+        meta.textContent = `Uploaded on ${newFile.uploaded_at_display}` +
+            (newFile.uploaded_by_username ? ` by ${newFile.uploaded_by_username}` : '');
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'button-danger-small file-delete-btn';
+        deleteBtn.dataset.fileId = newFile.id;
+        deleteBtn.dataset.deleteUrl = newFile.delete_url;
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.addEventListener('click', handleDeleteFileEvent);
+
+        li.append(link, meta, deleteBtn);
+        if (fileListContainer) fileListContainer.appendChild(li);
+        if (noFilesMessage) noFilesMessage.style.display = 'none';
+    }
+
+    function createUploadQueueItem(file, filenameSlug) {
+        const li = document.createElement('li');
+        li.className = 'upload-item';
+        li.dataset.filenameSlug = filenameSlug;
+        li.innerHTML = `
+            <div class="upload-item-header">
+                <span class="upload-item-name"></span>
+                <span class="upload-item-status"></span>
+                <button type="button" class="button-danger-small upload-item-btn">Cancel</button>
+            </div>
+            <div class="upload-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div class="upload-progress-fill"></div>
+            </div>`;
+        li.querySelector('.upload-item-name').textContent = file.name;
+        uploadQueue.appendChild(li);
+
+        const statusEl = li.querySelector('.upload-item-status');
+        const bar = li.querySelector('.upload-progress');
+        const fill = li.querySelector('.upload-progress-fill');
+        return {
+            li,
+            button: li.querySelector('.upload-item-btn'),
+            setProgress(sent, total) {
+                const percent = total ? Math.floor((sent / total) * 100) : 0;
+                fill.style.width = `${percent}%`;
+                bar.setAttribute('aria-valuenow', percent);
+                statusEl.textContent = `${formatUploadBytes(sent)} / ${formatUploadBytes(total)} (${percent}%)`;
+            },
+            setStatus(text) { statusEl.textContent = text; },
+            markFailed(text) {
+                li.classList.add('upload-item-failed');
+                statusEl.textContent = text;
+            },
+        };
+    }
+
+    function showUploadFieldErrors(errors) {
+        for (const field in errors) {
+            const errorEl = document.getElementById(`fileUploadError_${field}`);
+            if (errorEl) {
+                errorEl.textContent = errors[field].join(', ');
+                errorEl.style.display = 'block';
             }
-            
+        }
+    }
+
+    function resetUploadForm() {
+        fileUploadForm.reset();
+        if (filenameSlugInput) {
+            filenameSlugInput.value = '';
+            filenameSlugInput.dataset.autoGenerated = 'true';
+        }
+        if (filenameSlugHelpText) filenameSlugHelpText.textContent = filenameSlugDefaultHelp;
+    }
+
+    if (fileUploadForm && uploadQueue) {
+        fileUploadForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+
             const fileErrorEl = document.getElementById('fileUploadError_file');
             const slugErrorEl = document.getElementById('fileUploadError_filename_slug');
-            if(fileErrorEl) { fileErrorEl.textContent = ''; fileErrorEl.style.display = 'none'; }
-            if(slugErrorEl) { slugErrorEl.textContent = ''; slugErrorEl.style.display = 'none'; }
+            if (fileErrorEl) { fileErrorEl.textContent = ''; fileErrorEl.style.display = 'none'; }
+            if (slugErrorEl) { slugErrorEl.textContent = ''; slugErrorEl.style.display = 'none'; }
 
-            const formData = new FormData(fileUploadForm);
-            const csrfToken = getCsrfTokenFromMainForm(); 
-            if (!csrfToken) { 
-                if (uploadStatusMessage) {
-                    uploadStatusMessage.textContent = 'Error: CSRF token missing.';
-                    uploadStatusMessage.style.color = 'red';
-                }
-                return; 
+            const file = fileInput && fileInput.files && fileInput.files[0];
+            if (!file) {
+                showUploadFieldErrors({ file: ['Please select a file.'] });
+                return;
             }
-            // Add CSRF token to FormData for AJAX request (some backends might need it in headers instead)
-            // formData.append('csrfmiddlewaretoken', csrfToken); // If needed in body
-
-            const uploadUrl = "{% if page %}{% url 'wiki:page_upload_file' page.slug %}{% endif %}";
-            if (!uploadUrl) {
-                if (uploadStatusMessage) {
-                    uploadStatusMessage.textContent = 'Error: Cannot determine upload URL (page not saved yet?).';
-                    uploadStatusMessage.style.color = 'red';
-                }
+            const csrfToken = getCsrfTokenFromMainForm();
+            if (!csrfToken) {
+                setUploadStatusMessage('Error: CSRF token missing.', 'red');
                 return;
             }
 
-            fetch(uploadUrl, { 
-                method: 'POST', 
-                body: formData, 
-                headers: { 'X-CSRFToken': csrfToken } // Common way to send CSRF for Django AJAX
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    if (uploadStatusMessage) {
-                        uploadStatusMessage.textContent = data.message;
-                        uploadStatusMessage.style.color = 'green';
-                    }
-                    fileUploadForm.reset(); 
-                    if(filenameSlugInput) {
-                        filenameSlugInput.value = ''; // Clear slug field
-                        filenameSlugInput.dataset.autoGenerated = 'true'; // Reset for next auto-gen
-                    }
-                    if(filenameSlugHelpText) filenameSlugHelpText.textContent = "{% if upload_form.filename_slug.help_text %}{{ upload_form.filename_slug.help_text|safe|escapejs }}{% else %}Auto-generated from filename if left blank.{% endif %}";
+            const filenameSlug = filenameSlugInput ? filenameSlugInput.value.trim() : '';
+            const item = createUploadQueueItem(file, filenameSlug);
+            item.setProgress(0, file.size);
+            // Free the form right away so more files can be queued while this one uploads.
+            resetUploadForm();
 
-                    const newFile = data.file;
-                    const li = document.createElement('li');
-                    li.classList.add('file-item');
-                    li.id = `file-item-${newFile.id}`;
-                    li.dataset.filenameSlug = newFile.filename_slug_stored; // Use the slug confirmed by backend
-                    li.innerHTML = `
-                        <a href="${newFile.url}" target="_blank" class="file-link">${newFile.name}</a>
-                        <small class="file-meta">
-                            Uploaded on ${newFile.uploaded_at_display}
-                            ${newFile.uploaded_by_username ? `by ${newFile.uploaded_by_username}` : ''}
-                        </small>
-                        <button type="button" class="button-danger-small file-delete-btn" 
-                                data-file-id="${newFile.id}" 
-                                data-delete-url="${newFile.delete_url}">
-                            Delete
-                        </button>
-                    `;
-                    if (fileListContainer) fileListContainer.appendChild(li);
-                    if (noFilesMessage) noFilesMessage.style.display = 'none';
-                    // Add event listener to the new delete button
-                    li.querySelector('.file-delete-btn').addEventListener('click', handleDeleteFileEvent);
-                } else { 
-                    if (uploadStatusMessage) {
-                        uploadStatusMessage.textContent = data.message || 'Upload failed.';
-                        uploadStatusMessage.style.color = 'red';
-                    }
-                    if (data.errors) {
-                        for (const field in data.errors) {
-                            const errorEl = document.getElementById(`fileUploadError_${field}`);
-                            if (errorEl) {
-                                errorEl.textContent = data.errors[field].join(', ');
-                                errorEl.style.display = 'block';
-                            }
-                        }
-                    }
-                }
-            })
-            .catch(error => { 
-                console.error("Upload fetch error:", error);
-                if (uploadStatusMessage) {
-                    uploadStatusMessage.textContent = 'Network error during upload.';
-                    uploadStatusMessage.style.color = 'red';
-                }
-            })
-            .finally(() => { 
-                if (uploadStatusMessage) {
-                    setTimeout(() => { if(uploadStatusMessage) uploadStatusMessage.textContent = ''; }, 5000); 
-                }
+            const upload = startChunkedUpload({
+                file,
+                filenameSlug,
+                initUrl: uploadInitUrl,
+                csrfToken,
+                onProgress: (sent, total) => item.setProgress(sent, total),
+                onRetry: (attempt, max) => item.setStatus(`Connection problem, retrying (${attempt}/${max})...`),
             });
+
+            activeUploads++;
+            item.button.addEventListener('click', () => upload.cancel(), { once: true });
+
+            upload.promise
+                .then((data) => {
+                    item.li.remove();
+                    appendFileListItem(data.file);
+                    setUploadStatusMessage(data.message, 'green');
+                })
+                .catch((err) => {
+                    if (err instanceof UploadCancelledError) {
+                        item.li.remove();
+                        return;
+                    }
+                    console.error('Upload error:', err);
+                    item.markFailed(err.message || 'Upload failed.');
+                    if (err.fieldErrors) showUploadFieldErrors(err.fieldErrors);
+                    item.button.textContent = 'Dismiss';
+                    item.button.addEventListener('click', () => item.li.remove(), { once: true });
+                })
+                .finally(() => { activeUploads--; });
+        });
+
+        window.addEventListener('beforeunload', function(event) {
+            if (activeUploads > 0) {
+                event.preventDefault();
+                event.returnValue = '';
+            }
         });
     }
 

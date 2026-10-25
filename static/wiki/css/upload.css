@@ -1,0 +1,34 @@
+/* static/wiki/css/upload.css — per-file progress for chunked attachment uploads */
+.upload-queue { list-style-type: none; padding-left: 0; margin: 0 0 1rem 0; display: flex; flex-direction: column; gap: 0.6rem; }
+.upload-queue:empty { display: none; }
+
+.upload-item-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 0.3rem;
+}
+.upload-item-name { font-weight: 500; overflow-wrap: anywhere; }
+.upload-item-status {
+    font-size: 0.9em;
+    color: var(--wiki-text-meta);
+    flex-grow: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.upload-progress {
+    height: 8px;
+    border-radius: 4px;
+    background-color: var(--secondary-background-color);
+    overflow: hidden;
+}
+.upload-progress-fill {
+    height: 100%;
+    width: 0;
+    background-color: var(--wiki-button-primary-bg);
+    transition: width 0.2s ease-out;
+}
+
+.upload-item-failed .upload-item-status { color: var(--wiki-button-danger-bg); }
+.upload-item-failed .upload-progress-fill { background-color: var(--wiki-button-danger-bg); }

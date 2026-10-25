@@ -1,6 +1,10 @@
 # wiki2/services.py
 import os
 import re
+import json
+import time
+import uuid
+import shutil
 import zipfile
 import tarfile
 import tempfile
@@ -19,6 +23,7 @@ from django.utils.text import slugify
 from django.conf import settings
 from django.core.cache import cache
 from django.template.loader import render_to_string
+from django.core.files import File
 
 from .models import WikiPage, WikiFile
 from . import constants
@@ -271,3 +276,118 @@ def render_markdown_to_html(markdown_text: str, current_page: WikiPage) -> str:
     final_markdown = "".join(processed_parts)
     
     return markdown2.markdown(final_markdown, extras=["fenced-code-blocks", "tables", "nofollow", "header-ids", "break-on-newline", "html-classes"])
+
+
+# --- Chunked Upload Service ---
+#
+# An upload is a staging directory MEDIA_ROOT/.chunked_uploads/<upload_id>/ holding
+# `meta.json` (who/where/what) and `data.part` (the bytes received so far). State lives
+# on disk rather than in the cache so every gunicorn worker sees the same uploads.
+
+class ChunkedUploadError(Exception):
+    def __init__(self, message, received=None):
+        super().__init__(message)
+        self.received = received
+
+
+class _StagedFile(File):
+    """A File whose bytes already sit on disk, so FileSystemStorage moves it instead of copying."""
+    def temporary_file_path(self):
+        return self.file.name
+
+
+def _chunked_upload_root() -> str:
+    return os.path.join(settings.MEDIA_ROOT, constants.CHUNKED_UPLOAD_DIR_NAME)
+
+
+def purge_stale_chunked_uploads():
+    """Removes staging directories of uploads that were abandoned."""
+    root = _chunked_upload_root()
+    if not os.path.isdir(root):
+        return
+    cutoff = time.time() - constants.CHUNKED_UPLOAD_STALE_SECONDS
+    for entry in os.scandir(root):
+        if not entry.is_dir():
+            continue
+        data_path = os.path.join(entry.path, 'data.part')
+        last_activity = os.path.getmtime(data_path) if os.path.exists(data_path) else entry.stat().st_mtime
+        if last_activity < cutoff:
+            shutil.rmtree(entry.path, ignore_errors=True)
+
+
+def start_chunked_upload(page: WikiPage, user, filename: str, filename_slug: str, total_size: int) -> str:
+    purge_stale_chunked_uploads()
+    upload_id = str(uuid.uuid4())
+    upload_dir = os.path.join(_chunked_upload_root(), upload_id)
+    os.makedirs(upload_dir)
+    open(os.path.join(upload_dir, 'data.part'), 'wb').close()
+    meta = {
+        'page_id': page.pk,
+        'user_id': user.pk,
+        'filename': filename,
+        'filename_slug': filename_slug,
+        'total_size': total_size,
+    }
+    with open(os.path.join(upload_dir, 'meta.json'), 'w', encoding='utf-8') as f:
+        json.dump(meta, f)
+    return upload_id
+
+
+def get_chunked_upload(upload_id, page: WikiPage, user) -> dict | None:
+    """Returns the upload's metadata if it exists and belongs to this page and user."""
+    upload_dir = os.path.join(_chunked_upload_root(), str(upload_id))
+    try:
+        with open(os.path.join(upload_dir, 'meta.json'), encoding='utf-8') as f:
+            meta = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if meta.get('page_id') != page.pk or meta.get('user_id') != user.pk:
+        return None
+    meta['dir'] = upload_dir
+    meta['data_path'] = os.path.join(upload_dir, 'data.part')
+    return meta
+
+
+def write_upload_chunk(upload: dict, offset: int, stream) -> int:
+    """
+    Writes the request body at `offset` and returns the number of bytes now stored.
+    Writing at an offset below the current size is allowed, so a chunk whose response
+    got lost can simply be resent.
+    """
+    received = os.path.getsize(upload['data_path'])
+    if offset < 0 or offset > received:
+        raise ChunkedUploadError("Chunk offset does not match the data received so far.", received)
+
+    remaining = upload['total_size'] - offset
+    with open(upload['data_path'], 'r+b') as f:
+        f.seek(offset)
+        while True:
+            piece = stream.read(1024 * 1024)
+            if not piece:
+                break
+            remaining -= len(piece)
+            if remaining < 0:
+                f.truncate(offset)
+                raise ChunkedUploadError("Chunk exceeds the announced file size.", offset)
+            f.write(piece)
+        f.truncate()
+        return f.tell()
+
+
+def complete_chunked_upload(upload: dict, page: WikiPage, user) -> WikiFile:
+    received = os.path.getsize(upload['data_path'])
+    if received != upload['total_size']:
+        raise ChunkedUploadError(
+            f"Upload incomplete: received {received} of {upload['total_size']} bytes.", received
+        )
+
+    wiki_file = WikiFile(page=page, uploaded_by=user, filename_slug=upload['filename_slug'])
+    with open(upload['data_path'], 'rb') as staged:
+        wiki_file.file = _StagedFile(staged, name=upload['filename'])
+        wiki_file.save()
+    shutil.rmtree(upload['dir'], ignore_errors=True)
+    return wiki_file
+
+
+def cancel_chunked_upload(upload: dict):
+    shutil.rmtree(upload['dir'], ignore_errors=True)
